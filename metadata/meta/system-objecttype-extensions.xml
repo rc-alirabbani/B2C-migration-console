@@ -140,6 +140,50 @@
                 <mandatory-flag>false</mandatory-flag>
                 <externally-managed-flag>false</externally-managed-flag>
             </attribute-definition>
+            <attribute-definition attribute-id="rcMigContentfulSpaceId">
+                <display-name xml:lang="x-default">Contentful Space ID</display-name>
+                <description xml:lang="x-default">Space ID from Contentful → Settings → API keys or General settings</description>
+                <type>string</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="rcMigContentfulEnvironmentId">
+                <display-name xml:lang="x-default">Contentful Environment ID</display-name>
+                <description xml:lang="x-default">Environment ID (usually master)</description>
+                <type>string</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <default-value>master</default-value>
+            </attribute-definition>
+            <attribute-definition attribute-id="rcMigContentfulCmaPersonalAccessToken">
+                <display-name xml:lang="x-default">Contentful CMA Personal Access Token</display-name>
+                <description xml:lang="x-default">Personal access token from Contentful → Settings → CMA tokens</description>
+                <type>password</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="rcMigContentfulApiHost">
+                <display-name xml:lang="x-default">Contentful API Host</display-name>
+                <description xml:lang="x-default">CMA host (default api.contentful.com; EU: api.eu.contentful.com)</description>
+                <type>string</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+                <default-value>https://api.contentful.com</default-value>
+            </attribute-definition>
+            <attribute-definition attribute-id="rcMigContentfulDefaultEntryId">
+                <display-name xml:lang="x-default">Contentful Default Entry ID</display-name>
+                <description xml:lang="x-default">Optional Contentful entry ID (not space name or token name). Content → open entry → Info tab. Leave blank to skip.</description>
+                <type>string</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="rcMigContentLibraryId">
+                <display-name xml:lang="x-default">Content library ID (IMPEX target)</display-name>
+                <description xml:lang="x-default">SFCC library for Amplience/Contentful exports (Administration → Content → Shared Libraries → ID). Leave blank to use the current site's private library. Set when a shared library shares the site name (e.g. use private Library - MigrationConsole, not shared MigrationConsole).</description>
+                <type>string</type>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
         </custom-attribute-definitions>
         <group-definitions>
             <attribute-group group-id="RCMigrationConsole">
@@ -164,6 +208,12 @@
                 <attribute attribute-id="rcMigAmplienceHubName"/>
                 <attribute attribute-id="rcMigAmpliencePersonalAccessToken"/>
                 <attribute attribute-id="rcMigAmplienceDefaultDeliveryKey"/>
+                <attribute attribute-id="rcMigContentfulSpaceId"/>
+                <attribute attribute-id="rcMigContentfulEnvironmentId"/>
+                <attribute attribute-id="rcMigContentfulCmaPersonalAccessToken"/>
+                <attribute attribute-id="rcMigContentfulApiHost"/>
+                <attribute attribute-id="rcMigContentfulDefaultEntryId"/>
+                <attribute attribute-id="rcMigContentLibraryId"/>
             </attribute-group>
         </group-definitions>
     </type-extension>

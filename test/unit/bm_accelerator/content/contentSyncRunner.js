@@ -32,10 +32,18 @@ describe('contentSyncRunner', function () {
     beforeEach(function () {
         installResolver();
         ContentMgr = {
-            getFolder: function () { return null; }
+            getFolder: function () { return null; },
+            getSiteLibrary: function () { return null; },
+            getLibrary: function () { return null; }
         };
         Module._cache[require.resolve('dw/content/ContentMgr')] = {
             exports: ContentMgr
+        };
+        Module._cache[path.join(CARTRIDGE_ROOT, 'scripts/migration/contentMigration/contentLibraryResolver.js')] = {
+            exports: {
+                resolveTargetLibraryId: function () { return 'test-site-library'; },
+                getLibrary: function () { return null; }
+            }
         };
         delete require.cache[path.join(CARTRIDGE_ROOT, 'scripts/migration/contentMigration/contentSyncRunner.js')];
         syncRunner = require(path.join(

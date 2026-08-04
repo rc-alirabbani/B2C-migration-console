@@ -37,5 +37,15 @@ module.exports = {
         hubName:             '',
         personalAccessToken: '',
         defaultDeliveryKey:  ''
+    },
+    contentful: {
+        spaceId:                '',
+        environmentId:          'master',
+        cmaPersonalAccessToken: '',
+        apiHost:                'https://api.contentful.com',
+        defaultEntryId:         ''
+    },
+    cms: {
+        contentLibraryId: ''
     }
 };

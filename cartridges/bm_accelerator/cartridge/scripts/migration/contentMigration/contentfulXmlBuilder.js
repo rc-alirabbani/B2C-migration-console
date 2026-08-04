@@ -1,12 +1,11 @@
 'use strict';
 
 /**
- * Build SFCC library IMPEX XML for Amplience-mapped content assets.
- * Namespace: http://www.demandware.com/xml/impex/library/2006-10-31
+ * Build SFCC library IMPEX XML for Contentful-mapped content assets.
  */
 
 var NS_LIBRARY = 'http://www.demandware.com/xml/impex/library/2006-10-31';
-var FOLDER_ID = 'amplience';
+var FOLDER_ID = 'contentful';
 var libResolver = require('*/cartridge/scripts/migration/contentMigration/contentLibraryResolver');
 
 function escapeXml(value) {
@@ -22,30 +21,23 @@ function escapeCdata(value) {
     return String(value == null ? '' : value).replace(/]]>/g, ']]]]><![CDATA[>');
 }
 
-/**
- * Build a stable SFCC content-asset ID from delivery key and/or Amplience content id.
- * @param {Object} widget
- * @returns {string}
- */
 function sanitizeContentId(widget) {
-    var deliveryKey = typeof widget === 'string' ? widget : (widget && widget.deliveryKey);
-    var contentId   = typeof widget === 'object' && widget ? widget.contentId : '';
-    var raw = String(deliveryKey || contentId || 'amplience-content')
+    var entryId = typeof widget === 'object' && widget ? widget.contentId : '';
+    var slug = typeof widget === 'object' && widget ? widget.deliveryKey : '';
+    var raw = String(slug || entryId || 'contentful-content')
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-+|-+$/g, '');
-    if (!raw) raw = 'amplience-content';
+    if (!raw) raw = 'contentful-content';
     if (raw.length > 100) raw = raw.substring(0, 100);
-    return 'amp-' + raw;
+    return 'ctf-' + raw;
 }
 
 function buildBodyHtml(widget) {
     var preview = widget.preview || {};
     var attrs   = widget.attributes || {};
     if (attrs.richText) return String(attrs.richText);
-    if (attrs.bannerMessage) return String(attrs.bannerMessage);
     if (attrs.previewHtml) return String(attrs.previewHtml);
-    if (attrs.text) return String(attrs.text);
     if (preview.body) {
         var body = String(preview.body);
         return body.indexOf('<') >= 0 ? body : '<p>' + escapeXml(body) + '</p>';
@@ -59,10 +51,10 @@ function buildBodyHtml(widget) {
 function buildDescription(widget) {
     var parts = [];
     if (widget.widgetType) parts.push('Widget: ' + widget.widgetType);
-    if (widget.schemaShort || widget.schema) parts.push('Schema: ' + (widget.schemaShort || widget.schema));
-    if (widget.deliveryKey) parts.push('Delivery key: ' + widget.deliveryKey);
-    if (widget.contentId) parts.push('Content ID: ' + widget.contentId);
-    return parts.join(' | ') || 'Migrated Amplience content';
+    if (widget.schemaShort || widget.schema) parts.push('Content type: ' + (widget.schemaShort || widget.schema));
+    if (widget.deliveryKey) parts.push('Slug: ' + widget.deliveryKey);
+    if (widget.contentId) parts.push('Entry ID: ' + widget.contentId);
+    return parts.join(' | ') || 'Migrated Contentful content';
 }
 
 function buildContentAssetXml(widget) {
@@ -84,17 +76,16 @@ function buildContentAssetXml(widget) {
     lines.push('    <description xml:lang="x-default">' + escapeXml(buildDescription(widget)) + '</description>');
     lines.push('    <online-flag>true</online-flag>');
     lines.push('    <searchable-flag>false</searchable-flag>');
-    // XSD order: custom-attributes must come before folder-links
     lines.push('    <custom-attributes>');
     lines.push('      <custom-attribute attribute-id="body" xml:lang="x-default"><![CDATA[' + escapeCdata(bodyHtml) + ']]></custom-attribute>');
-    lines.push('      <custom-attribute attribute-id="amplienceDeliveryKey">' + escapeXml(widget.deliveryKey || '') + '</custom-attribute>');
-    lines.push('      <custom-attribute attribute-id="amplienceContentId">' + escapeXml(widget.contentId || '') + '</custom-attribute>');
-    lines.push('      <custom-attribute attribute-id="amplienceWidgetType">' + escapeXml(widget.widgetType || '') + '</custom-attribute>');
-    lines.push('      <custom-attribute attribute-id="amplienceSchema">' + escapeXml(widget.schema || '') + '</custom-attribute>');
-    lines.push('      <custom-attribute attribute-id="amplienceWidgetAttributes"><![CDATA[' + escapeCdata(attrsJson) + ']]></custom-attribute>');
-    lines.push('      <custom-attribute attribute-id="amplienceSourceJson"><![CDATA[' + escapeCdata(sourceJson) + ']]></custom-attribute>');
+    lines.push('      <custom-attribute attribute-id="contentfulEntryId">' + escapeXml(widget.contentId || '') + '</custom-attribute>');
+    lines.push('      <custom-attribute attribute-id="contentfulContentType">' + escapeXml(widget.schema || '') + '</custom-attribute>');
+    lines.push('      <custom-attribute attribute-id="contentfulSlug">' + escapeXml(widget.deliveryKey || '') + '</custom-attribute>');
+    lines.push('      <custom-attribute attribute-id="contentfulWidgetType">' + escapeXml(widget.widgetType || '') + '</custom-attribute>');
+    lines.push('      <custom-attribute attribute-id="contentfulWidgetAttributes"><![CDATA[' + escapeCdata(attrsJson) + ']]></custom-attribute>');
+    lines.push('      <custom-attribute attribute-id="contentfulSourceJson"><![CDATA[' + escapeCdata(sourceJson) + ']]></custom-attribute>');
     if (widget.preview && widget.preview.image) {
-        lines.push('      <custom-attribute attribute-id="amplienceImageUrl">' + escapeXml(widget.preview.image) + '</custom-attribute>');
+        lines.push('      <custom-attribute attribute-id="contentfulImageUrl">' + escapeXml(widget.preview.image) + '</custom-attribute>');
     }
     lines.push('    </custom-attributes>');
     lines.push('    <folder-links>');
@@ -104,23 +95,10 @@ function buildContentAssetXml(widget) {
     return lines.join('\n');
 }
 
-/**
- * Resolve default library id = current site private library (site ID).
- * Falls back to AmplienceSharedLibrary when Site is unavailable.
- * @param {string} [libraryId]
- * @returns {string}
- */
 function resolveLibraryId(libraryId) {
-    return libResolver.resolveTargetLibraryId(libraryId, 'AmplienceSharedLibrary');
+    return libResolver.resolveTargetLibraryId(libraryId, 'ContentfulSharedLibrary');
 }
 
-/**
- * @param {Object[]} widgets - transformed Amplience widgets
- * @param {string} [libraryId]
- * @param {Object} [opts]
- * @param {boolean} [opts.close=true] - whether to write the closing </library> tag
- * @returns {{ xml: string, built: number, contentIds: string[], libraryId: string }}
- */
 function buildXml(widgets, libraryId, opts) {
     var options = opts || {};
     var closeLibrary = options.close !== false;
@@ -132,8 +110,8 @@ function buildXml(widgets, libraryId, opts) {
     parts.push('<?xml version="1.0" encoding="UTF-8"?>');
     parts.push('<library xmlns="' + NS_LIBRARY + '" library-id="' + escapeXml(libId) + '">');
     parts.push('  <folder folder-id="' + FOLDER_ID + '">');
-    parts.push('    <display-name xml:lang="x-default">Amplience Migrated</display-name>');
-    parts.push('    <description xml:lang="x-default">Content assets migrated from Amplience CMS</description>');
+    parts.push('    <display-name xml:lang="x-default">Contentful Migrated</display-name>');
+    parts.push('    <description xml:lang="x-default">Content assets migrated from Contentful CMS</description>');
     parts.push('    <online-flag>true</online-flag>');
     parts.push('  </folder>');
 

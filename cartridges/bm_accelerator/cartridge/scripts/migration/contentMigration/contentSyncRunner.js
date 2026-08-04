@@ -1,6 +1,7 @@
 'use strict';
 
 var ContentMgr = require('dw/content/ContentMgr');
+var libResolver = require('*/cartridge/scripts/migration/contentMigration/contentLibraryResolver');
 
 var FOLDER_ID = 'amplience';
 
@@ -32,12 +33,20 @@ function collectionToArray(collection) {
  * @returns {Object} Ref summary for re-sync export
  */
 function listMigratedRefs(folderId) {
-    var folder = ContentMgr.getFolder(folderId || FOLDER_ID);
+    var fid = folderId || FOLDER_ID;
+    var useContentful = fid === 'contentful';
+    var libraryId = libResolver.resolveTargetLibraryId('', '');
+    var library = libResolver.getLibrary(libraryId);
+    var folder = library && typeof library.getFolder === 'function'
+        ? library.getFolder(fid)
+        : ContentMgr.getFolder(fid);
     if (!folder) {
         return {
             ok: false,
-            error: 'Folder "' + (folderId || FOLDER_ID) + '" was not found in the current library.',
-            folderId: folderId || FOLDER_ID,
+            error: 'Folder "' + fid + '" was not found in library "'
+                + (libraryId || (library && library.ID) || '?') + '".',
+            folderId: fid,
+            libraryId: libraryId || '',
             contentIds: [],
             deliveryKeys: [],
             total: 0
@@ -63,8 +72,13 @@ function listMigratedRefs(folderId) {
         if (!asset || asset.online === false || !asset.custom) continue;
 
         custom = asset.custom;
-        contentId = String(custom.amplienceContentId || '').trim();
-        deliveryKey = String(custom.amplienceDeliveryKey || '').trim();
+        if (useContentful) {
+            contentId = String(custom.contentfulEntryId || '').trim();
+            deliveryKey = String(custom.contentfulSlug || '').trim();
+        } else {
+            contentId = String(custom.amplienceContentId || '').trim();
+            deliveryKey = String(custom.amplienceDeliveryKey || '').trim();
+        }
 
         if (contentId && !seenIds[contentId]) {
             seenIds[contentId] = true;
@@ -77,7 +91,8 @@ function listMigratedRefs(folderId) {
 
     return {
         ok: true,
-        folderId: folderId || FOLDER_ID,
+        folderId: fid,
+        libraryId: libraryId || (library && library.ID) || '',
         folderName: folder.displayName || folder.ID,
         contentIds: contentIds,
         deliveryKeys: deliveryKeys,

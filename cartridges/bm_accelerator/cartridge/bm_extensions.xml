@@ -65,8 +65,10 @@
             <pipeline name="Accelerator-DownloadContentXml"/>
             <pipeline name="Accelerator-DownloadProductXml"/>
             <pipeline name="Accelerator-ExportAmplienceContent"/>
+            <pipeline name="Accelerator-ExportContentfulContent"/>
             <pipeline name="Accelerator-ExportOrders"/>
             <pipeline name="Accelerator-FetchAmplienceContent"/>
+            <pipeline name="Accelerator-FetchContentfulContent"/>
             <pipeline name="Accelerator-FetchCTCategories"/>
             <pipeline name="Accelerator-FetchCtpCustomerGroups"/>
             <pipeline name="Accelerator-FetchSFCCCatalogs"/>
@@ -96,7 +98,10 @@
             <pipeline name="Accelerator-InventoryMigrationCount"/>
             <pipeline name="Accelerator-ListAmplienceContent"/>
             <pipeline name="Accelerator-ListAmplienceContentTypes"/>
+            <pipeline name="Accelerator-ListContentfulContent"/>
+            <pipeline name="Accelerator-ListContentfulContentTypes"/>
             <pipeline name="Accelerator-ListMigratedAmplienceRefs"/>
+            <pipeline name="Accelerator-ListMigratedContentfulRefs"/>
             <pipeline name="Accelerator-ListShippingMethods"/>
             <pipeline name="Accelerator-ListStores"/>
             <pipeline name="Accelerator-MigrateCustomerAddresses"/>
@@ -108,6 +113,7 @@
             <pipeline name="Accelerator-PricebookMigration"/>
             <pipeline name="Accelerator-PricebookMigrationCount"/>
             <pipeline name="Accelerator-PreviewAmplienceLibrary"/>
+            <pipeline name="Accelerator-PreviewContentfulLibrary"/>
             <pipeline name="Accelerator-ProductMigrationCount"/>
             <pipeline name="Accelerator-ProductWizard"/>
             <pipeline name="Accelerator-RunCategoryMigration"/>

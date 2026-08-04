@@ -16,7 +16,8 @@ var SERVICE_IDS = {
     sap:       'accelerator.sap.api',
     sfcc:      'accelerator.sfcc.ocapi',
     webdav:    'accelerator.sfcc.webdav',
-    amplience: 'accelerator.amplience.api'
+    amplience: 'accelerator.amplience.api',
+    contentful: 'accelerator.contentful.api'
 };
 
 /**

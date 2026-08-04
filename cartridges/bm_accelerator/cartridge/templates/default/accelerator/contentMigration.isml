@@ -12,13 +12,14 @@
 
     <section class="acc-section acc-section--wizard">
         <header class="acc-section__head">
-            <h2>${Resource.msg('accelerator.contentmigration.heading', 'accelerator', null)}</h2>
-            <p class="cms-intro">${Resource.msg('accelerator.contentmigration.intro', 'accelerator', null)}</p>
+            <h2><isprint value="${pdict.pageHeading || Resource.msg('accelerator.contentmigration.heading', 'accelerator', null)}" encoding="off"/></h2>
+            <p class="cms-intro"><isprint value="${pdict.pageIntro || Resource.msg('accelerator.contentmigration.intro', 'accelerator', null)}" encoding="off"/></p>
         </header>
 
         <div id="acc-cms-root"
              class="acc-cms-wizard"
              data-platform-id="${pdict.platform.id}"
+             data-hide-repo-filter="${pdict.hideRepoFilter ? 'true' : 'false'}"
              data-connected="${pdict.dataConnected ? 'true' : 'false'}"
              data-initial-step="${pdict.initialStep}"
              data-test-connection-url="<isprint value="${pdict.testConnectionUrl}" encoding="htmldoublequote"/>"
@@ -37,7 +38,7 @@
                     ${Resource.msg('accelerator.contentmigration.step.connect', 'accelerator', null)}
                 </button>
                 <button type="button" id="cms-tab-2" class="cms-steps__tab" data-step="2">
-                    ${Resource.msg('accelerator.contentmigration.step.select', 'accelerator', null)}
+                    ${pdict.cmsCopy.stepSelect}
                 </button>
                 <button type="button" id="cms-tab-3" class="cms-steps__tab" data-step="3">
                     ${Resource.msg('accelerator.contentmigration.step.preview', 'accelerator', null)}
@@ -48,7 +49,7 @@
 
                 <div id="cms-panel-step1" class="cms-panel cms-step-panel">
                     <div class="cms-panel__head">
-                        <span class="cms-panel__title">${Resource.msg('accelerator.contentmigration.connect.title', 'accelerator', null)}</span>
+                        <span class="cms-panel__title">${pdict.cmsCopy.connectTitle}</span>
                     </div>
                     <div class="cms-panel__body">
                         <p class="cms-panel__hint">${pdict.platform.connectHint}</p>
@@ -80,19 +81,19 @@
 
                 <div id="cms-panel-step2" class="cms-panel cms-step-panel" style="display:none;">
                     <div class="cms-panel__head">
-                        <span class="cms-panel__title">${Resource.msg('accelerator.contentmigration.content.title', 'accelerator', null)}</span>
+                        <span class="cms-panel__title">${pdict.cmsCopy.contentTitle}</span>
                         <button type="button" id="acc-cms-load-btn" class="acc-btn acc-btn--ghost">
                             ${Resource.msg('accelerator.contentmigration.content.load', 'accelerator', null)}
                         </button>
                         <span id="acc-cms-list-status" class="cms-panel__status"></span>
                     </div>
                     <div class="cms-panel__body">
-                        <p class="cms-panel__hint">${Resource.msg('accelerator.contentmigration.content.prompt', 'accelerator', null)}</p>
+                        <p class="cms-panel__hint">${pdict.cmsCopy.contentPrompt}</p>
                         <div class="cms-fetch-row">
-                            <label class="acc-form__label" for="acc-cms-delivery-key">${Resource.msg('accelerator.contentmigration.deliveryKey', 'accelerator', null)}</label>
+                            <label class="acc-form__label" for="acc-cms-delivery-key">${pdict.cmsCopy.deliveryKeyLabel}</label>
                             <input id="acc-cms-delivery-key" class="acc-form__input cms-fetch-row__input" type="text"
                                    value="${pdict.defaultDeliveryKey}"
-                                   placeholder="page/jackets" />
+                                   placeholder="${pdict.cmsCopy.deliveryKeyPlaceholder}" />
                             <button type="button" id="acc-cms-fetch-btn" class="acc-btn acc-btn--secondary">
                                 ${Resource.msg('accelerator.contentmigration.content.fetch', 'accelerator', null)}
                             </button>
@@ -125,7 +126,7 @@
                                     ${Resource.msg('accelerator.contentmigration.bulk.previewAll', 'accelerator', null)}
                                 </button>
                                 <button type="button" id="acc-cms-export-library-btn" class="acc-btn acc-btn--solid">
-                                    ${Resource.msg('accelerator.contentmigration.bulk.exportLibrary', 'accelerator', null)}
+                                    ${pdict.cmsCopy.exportLibraryLabel}
                                 </button>
                                 <button type="button" id="acc-cms-resync-migrated-btn" class="acc-btn acc-btn--secondary">
                                     ${Resource.msg('accelerator.contentmigration.bulk.resyncMigrated', 'accelerator', null)}
@@ -135,7 +136,7 @@
                         <p class="cms-panel__hint cms-panel__hint--note">${Resource.msg('accelerator.contentmigration.bulk.resyncHint', 'accelerator', null)}</p>
                         <div id="acc-cms-bulk-status" class="cms-export-alert" style="display:none;" role="status"></div>
                         <div id="acc-cms-bulk-downloads" class="acc-xml-downloads"></div>
-                        <div id="acc-cms-list-loading" class="cms-muted">${Resource.msg('accelerator.contentmigration.content.loadHint', 'accelerator', null)}</div>
+                        <div id="acc-cms-list-loading" class="cms-muted">${pdict.cmsCopy.contentLoadHint}</div>
                         <div id="acc-cms-list-error" class="cms-error" style="display:none;"></div>
                         <div id="acc-cms-table-wrap" class="cms-table-wrap" style="display:none;">
                             <div class="cms-table-scroll">
@@ -144,7 +145,7 @@
                                     <tr>
                                         <th class="cms-col-label">${Resource.msg('accelerator.contentmigration.table.label', 'accelerator', null)}</th>
                                         <th class="cms-col-repo">${Resource.msg('accelerator.contentmigration.table.repo', 'accelerator', null)}</th>
-                                        <th class="cms-col-key">${Resource.msg('accelerator.contentmigration.table.deliveryKey', 'accelerator', null)}</th>
+                                        <th class="cms-col-key">${pdict.cmsCopy.tableKeyLabel}</th>
                                         <th class="cms-col-schema">${Resource.msg('accelerator.contentmigration.table.schema', 'accelerator', null)}</th>
                                         <th class="cms-col-status">${Resource.msg('accelerator.contentmigration.table.status', 'accelerator', null)}</th>
                                         <th class="cms-col-action"></th>
@@ -175,11 +176,11 @@
                     </div>
                     <div class="cms-panel__body cms-panel__body--preview">
                         <div id="acc-cms-widget-empty" class="cms-muted">
-                            ${Resource.msg('accelerator.contentmigration.widget.empty', 'accelerator', null)}
+                            ${pdict.cmsCopy.widgetEmpty}
                         </div>
                         <div id="acc-cms-widget-preview" style="display:none;">
                             <div class="cms-widget-meta">
-                                <div><strong>${Resource.msg('accelerator.contentmigration.widget.deliveryKey', 'accelerator', null)}:</strong> <code id="acc-cms-preview-key"></code></div>
+                                <div><strong>${pdict.cmsCopy.widgetKeyLabel}:</strong> <code id="acc-cms-preview-key"></code></div>
                                 <div><strong>${Resource.msg('accelerator.contentmigration.widget.component', 'accelerator', null)}:</strong> <code id="acc-cms-preview-component"></code></div>
                                 <div><strong>${Resource.msg('accelerator.contentmigration.widget.schema', 'accelerator', null)}:</strong> <span id="acc-cms-preview-schema"></span></div>
                             </div>
@@ -189,7 +190,7 @@
                                 <pre id="acc-cms-preview-json" class="cms-json-block"></pre>
                             </details>
                             <details class="cms-json-details">
-                                <summary>${Resource.msg('accelerator.contentmigration.widget.sourceProperties', 'accelerator', null)}</summary>
+                                <summary>${pdict.cmsCopy.sourceProperties}</summary>
                                 <pre id="acc-cms-source-json" class="cms-json-block"></pre>
                             </details>
 
@@ -204,7 +205,7 @@
                                 </div>
                                 <div id="acc-cms-export-alert" class="cms-export-alert" style="display:none;" role="status"></div>
                                 <div id="acc-cms-export-downloads" class="acc-xml-downloads"></div>
-                                <p class="cms-panel__hint cms-panel__hint--note">${Resource.msg('accelerator.contentmigration.export.hint', 'accelerator', null)} <code>/Impex/${pdict.impexPath}/</code></p>
+                                <p class="cms-panel__hint cms-panel__hint--note">${pdict.cmsCopy.exportHint} <code>/Impex/${pdict.impexPath}/</code></p>
                             </div>
                         </div>
                         <div id="acc-cms-widget-error" class="cms-error cms-error--spaced" style="display:none;"></div>

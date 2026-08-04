@@ -230,6 +230,12 @@ function buildConnectionCreds(platformId) {
         creds.hubName             = (cfg.amplience && cfg.amplience.hubName) || '';
         creds.personalAccessToken = (cfg.amplience && cfg.amplience.personalAccessToken) || '';
         creds.defaultDeliveryKey  = (cfg.amplience && cfg.amplience.defaultDeliveryKey) || '';
+    } else if (platformId === 'contentful') {
+        creds.spaceId                = (cfg.contentful && cfg.contentful.spaceId) || '';
+        creds.environmentId          = (cfg.contentful && cfg.contentful.environmentId) || 'master';
+        creds.cmaPersonalAccessToken = (cfg.contentful && cfg.contentful.cmaPersonalAccessToken) || '';
+        creds.apiHost                = (cfg.contentful && cfg.contentful.apiHost) || 'https://api.contentful.com';
+        creds.defaultEntryId         = (cfg.contentful && cfg.contentful.defaultEntryId) || '';
     } else if (platformId === 'sap') {
         creds.baseUrl      = cfg.sap.baseUrl || '';
         creds.baseSite     = cfg.sap.baseSite || '';
@@ -247,6 +253,46 @@ function buildConnectionCreds(platformId) {
  */
 function hasConnectionCreds(platformId, creds) {
     return buildConnectionSummary(platformId).configured;
+}
+
+/**
+ * Platform-specific CMS wizard copy (Amplience vs Contentful).
+ * @param {string} platformId
+ * @returns {Object}
+ */
+function buildCmsCopy(platformId) {
+    if (platformId === 'contentful') {
+        return {
+            connectTitle:           Resource.msg('accelerator.contentmigration.contentful.connect.title', 'accelerator', null),
+            stepSelect:             Resource.msg('accelerator.contentmigration.contentful.step.select', 'accelerator', null),
+            contentTitle:           Resource.msg('accelerator.contentmigration.contentful.content.title', 'accelerator', null),
+            contentPrompt:          Resource.msg('accelerator.contentmigration.contentful.content.prompt', 'accelerator', null),
+            contentLoadHint:        Resource.msg('accelerator.contentmigration.contentful.content.loadHint', 'accelerator', null),
+            exportLibraryLabel:     Resource.msg('accelerator.contentmigration.contentful.bulk.exportLibrary', 'accelerator', null),
+            exportHint:             Resource.msg('accelerator.contentmigration.export.hint.contentful', 'accelerator', null),
+            deliveryKeyLabel:       Resource.msg('accelerator.contentmigration.contentful.deliveryKey', 'accelerator', null),
+            deliveryKeyPlaceholder: Resource.msg('accelerator.contentmigration.contentful.deliveryKey.placeholder', 'accelerator', null),
+            tableKeyLabel:          Resource.msg('accelerator.contentmigration.contentful.table.entryOrSlug', 'accelerator', null),
+            widgetKeyLabel:         Resource.msg('accelerator.contentmigration.contentful.widget.entryOrSlug', 'accelerator', null),
+            widgetEmpty:            Resource.msg('accelerator.contentmigration.contentful.widget.empty', 'accelerator', null),
+            sourceProperties:       Resource.msg('accelerator.contentmigration.contentful.widget.source', 'accelerator', null)
+        };
+    }
+    return {
+        connectTitle:           Resource.msg('accelerator.contentmigration.connect.title', 'accelerator', null),
+        stepSelect:             Resource.msg('accelerator.contentmigration.step.select', 'accelerator', null),
+        contentTitle:           Resource.msg('accelerator.contentmigration.content.title', 'accelerator', null),
+        contentPrompt:          Resource.msg('accelerator.contentmigration.content.prompt', 'accelerator', null),
+        contentLoadHint:        Resource.msg('accelerator.contentmigration.content.loadHint', 'accelerator', null),
+        exportLibraryLabel:     Resource.msg('accelerator.contentmigration.bulk.exportLibrary', 'accelerator', null),
+        exportHint:             Resource.msg('accelerator.contentmigration.export.hint.amplience', 'accelerator', null),
+        deliveryKeyLabel:       Resource.msg('accelerator.contentmigration.deliveryKey', 'accelerator', null),
+        deliveryKeyPlaceholder: 'page/jackets',
+        tableKeyLabel:          Resource.msg('accelerator.contentmigration.table.deliveryKey', 'accelerator', null),
+        widgetKeyLabel:         Resource.msg('accelerator.contentmigration.widget.deliveryKey', 'accelerator', null),
+        widgetEmpty:            Resource.msg('accelerator.contentmigration.widget.empty', 'accelerator', null),
+        sourceProperties:       Resource.msg('accelerator.contentmigration.widget.sourceProperties', 'accelerator', null)
+    };
 }
 
 /**
@@ -296,6 +342,41 @@ function buildConnectionSummary(platformId) {
             value:       key,
             placeholder: 'home/banner',
             optional:    true
+        });
+        var libResolverAmp = require('*/cartridge/scripts/migration/contentMigration/contentLibraryResolver');
+        lines.push({
+            label:    'Content library (IMPEX)',
+            value:    libResolverAmp.resolveTargetLibraryId('', 'AmplienceSharedLibrary'),
+            optional: true
+        });
+    } else if (platformId === 'contentful') {
+        var cf = cfg.contentful || {};
+        var spaceId = cf.spaceId || '';
+        var envId = cf.environmentId || 'master';
+        var cma = cf.cmaPersonalAccessToken || '';
+        var entryId = cf.defaultEntryId || '';
+        var apiHost = cf.apiHost || 'https://api.contentful.com';
+        configured = !!(spaceId && envId && cma);
+        lines.push({ label: 'Space ID', value: spaceId, placeholder: 'cfexampleapi' });
+        lines.push({ label: 'Environment ID', value: envId, placeholder: 'master' });
+        lines.push({
+            label:       'CMA personal access token',
+            value:       cma ? '••••••••' : '',
+            placeholder: 'CFPAT-...',
+            secret:      true
+        });
+        lines.push({ label: 'API host', value: apiHost, placeholder: 'https://api.contentful.com' });
+        lines.push({
+            label:       'Default entry ID',
+            value:       entryId,
+            placeholder: 'optional',
+            optional:    true
+        });
+        var libResolverCf = require('*/cartridge/scripts/migration/contentMigration/contentLibraryResolver');
+        lines.push({
+            label:    'Content library (IMPEX)',
+            value:    libResolverCf.resolveTargetLibraryId('', 'ContentfulSharedLibrary'),
+            optional: true
         });
     }
 
@@ -377,10 +458,14 @@ exports.TestConnection = function () {
 
     try {
         var result = connector.testConnectionWith(creds);
-        if (getParam('mode') === 'data' || platformId === 'amplience') {
+        if (getParam('mode') === 'data' || platformId === 'amplience' || platformId === 'contentful') {
             dataMigrationSession.markConnected(platformId, result.expiresIn);
         }
-        jsonResponse({ ok: true, project: result.project });
+        jsonResponse({
+            ok:      true,
+            project: result.project,
+            warning: result.warning || ''
+        });
     } catch (e) {
         jsonResponse({ ok: false, error: e.message || String(e) });
     }
@@ -542,7 +627,7 @@ exports.Start = function () {
         productWizardUrl:          URLUtils.url('Accelerator-ProductWizard').toString(),
         categoryMigrationUrl:      URLUtils.url('Accelerator-CategoryMigration').toString(),
         contentMigrationUrl:       URLUtils.url('Accelerator-ContentMigration').toString(),
-        cssUrl:                    URLUtils.staticURL('/css/accelerator-migration.css').toString(),
+        cssUrl:                    URLUtils.staticURL('/css/accelerator-migration.css').toString() + '?v=19',
         jsUrl: URLUtils.staticURL('/js/categoryMigration.js').toString(),
         fetchCatalogsUrl : URLUtils.url('Accelerator-FetchSFCCCatalogs').toString(),
         createCatalogUrl : URLUtils.url('Accelerator-CreateCatalog').toString(),
@@ -4727,27 +4812,65 @@ exports.ContentMigration = function () {
     var pageCtx = migrationPageContext(platformId, 'content');
     var dataConnected = dataMigrationSession.isConnected(platformId);
     var migCfg = require('*/cartridge/scripts/migration/configAccessor');
-    var defaultDeliveryKey = (migCfg.amplience && migCfg.amplience.defaultDeliveryKey) || '';
+    var defaultDeliveryKey = '';
+    if (platformId === 'contentful') {
+        defaultDeliveryKey = (migCfg.contentful && migCfg.contentful.defaultEntryId) || '';
+    } else {
+        defaultDeliveryKey = (migCfg.amplience && migCfg.amplience.defaultDeliveryKey) || '';
+    }
+
+    var listContentUrl;
+    var fetchContentUrl;
+    var previewLibraryUrl;
+    var exportContentUrl;
+    var listMigratedRefsUrl;
+    var pageHeading;
+    var pageIntro;
+    var hideRepoFilter = false;
+
+    if (platformId === 'contentful') {
+        listContentUrl = URLUtils.url('Accelerator-ListContentfulContent').toString();
+        fetchContentUrl = URLUtils.url('Accelerator-FetchContentfulContent').toString();
+        previewLibraryUrl = URLUtils.url('Accelerator-PreviewContentfulLibrary').toString();
+        exportContentUrl = URLUtils.url('Accelerator-ExportContentfulContent').toString();
+        listMigratedRefsUrl = URLUtils.url('Accelerator-ListMigratedContentfulRefs').toString();
+        pageHeading = Resource.msg('accelerator.contentmigration.contentful.heading', 'accelerator', null);
+        pageIntro = Resource.msg('accelerator.contentmigration.contentful.intro', 'accelerator', null);
+        hideRepoFilter = true;
+    } else {
+        listContentUrl = URLUtils.url('Accelerator-ListAmplienceContent').toString();
+        fetchContentUrl = URLUtils.url('Accelerator-FetchAmplienceContent').toString();
+        previewLibraryUrl = URLUtils.url('Accelerator-PreviewAmplienceLibrary').toString();
+        exportContentUrl = URLUtils.url('Accelerator-ExportAmplienceContent').toString();
+        listMigratedRefsUrl = URLUtils.url('Accelerator-ListMigratedAmplienceRefs').toString();
+        pageHeading = Resource.msg('accelerator.contentmigration.heading', 'accelerator', null);
+        pageIntro = Resource.msg('accelerator.contentmigration.intro', 'accelerator', null);
+    }
+
     ISML.renderTemplate('accelerator/contentMigration', withBmFrame({
-        title:               Resource.msg('accelerator.contentmigration.heading', 'accelerator', null),
+        title:               pageHeading,
         subtitle:            Resource.msg('accelerator.subtitle', 'accelerator', null),
+        pageHeading:         pageHeading,
+        pageIntro:           pageIntro,
         platform:            platform,
         dataConnected:       dataConnected,
         connectionSummary:   buildConnectionSummary(platformId),
         defaultDeliveryKey:  defaultDeliveryKey,
+        hideRepoFilter:      hideRepoFilter,
+        cmsCopy:             buildCmsCopy(platformId),
         initialStep:         dataConnected ? 2 : 1,
         dashboardUrl:        URLUtils.url('Accelerator-Start').toString(),
         testConnectionUrl:   URLUtils.url('Accelerator-TestConnection').toString(),
-        listContentUrl:      URLUtils.url('Accelerator-ListAmplienceContent').toString(),
-        fetchContentUrl:     URLUtils.url('Accelerator-FetchAmplienceContent').toString(),
-        previewLibraryUrl:   URLUtils.url('Accelerator-PreviewAmplienceLibrary').toString(),
-        exportContentUrl:    URLUtils.url('Accelerator-ExportAmplienceContent').toString(),
-        listMigratedRefsUrl: URLUtils.url('Accelerator-ListMigratedAmplienceRefs').toString(),
+        listContentUrl:      listContentUrl,
+        fetchContentUrl:     fetchContentUrl,
+        previewLibraryUrl:   previewLibraryUrl,
+        exportContentUrl:    exportContentUrl,
+        listMigratedRefsUrl: listMigratedRefsUrl,
         downloadXmlUrl:      URLUtils.url('Accelerator-DownloadContentXml').toString(),
         impexPath:           pageCtx.impexPath,
         impexUrl:            pageCtx.impexUrl,
-        cssUrl:              URLUtils.staticURL('/css/accelerator-migration.css').toString() + '?v=17',
-        contentMigrationJsUrl: URLUtils.staticURL('/js/content-migration.js').toString() + '?v=23'
+        cssUrl:              URLUtils.staticURL('/css/accelerator-migration.css').toString() + '?v=18',
+        contentMigrationJsUrl: URLUtils.staticURL('/js/content-migration.js').toString() + '?v=28'
     }));
 };
 exports.ContentMigration.public = true;
@@ -4762,6 +4885,10 @@ exports.ContentSchemaMigration = function () {
         return;
     }
 
+    var listContentTypesUrl = platformId === 'contentful'
+        ? URLUtils.url('Accelerator-ListContentfulContentTypes').toString()
+        : URLUtils.url('Accelerator-ListAmplienceContentTypes').toString();
+
     ISML.renderTemplate('accelerator/contentSchemaMigration', withBmFrame({
         title:               Resource.msg('accelerator.contentschemamigration.heading', 'accelerator', null),
         subtitle:            Resource.msg('accelerator.subtitle', 'accelerator', null),
@@ -4769,7 +4896,7 @@ exports.ContentSchemaMigration = function () {
         connectionSummary:   buildConnectionSummary(platformId),
         dashboardUrl:        URLUtils.url('Accelerator-Start').toString(),
         testConnectionUrl:   URLUtils.url('Accelerator-TestConnection').toString(),
-        listContentTypesUrl: URLUtils.url('Accelerator-ListAmplienceContentTypes').toString(),
+        listContentTypesUrl: listContentTypesUrl,
         cssUrl:              URLUtils.staticURL('/css/accelerator-migration.css').toString(),
         contentSchemaMigrationJsUrl: URLUtils.staticURL('/js/content-schema-migration.js').toString() + '?v=1'
     }));
@@ -4940,6 +5067,133 @@ exports.ListMigratedAmplienceRefs = function () {
     }
 };
 exports.ListMigratedAmplienceRefs.public = true;
+
+function parseCmsContentIds() {
+    return parseAmplienceContentIds();
+}
+
+exports.ListContentfulContentTypes = function () {
+    response.setContentType('application/json');
+    try {
+        var fetcher = require('*/cartridge/scripts/migration/contentMigration/contentfulSchemaFetcher');
+        var pageSize = getParam('pageSize') || '100';
+        jsonResponse({ ok: true, result: fetcher.listContentTypes(pageSize) });
+    } catch (e) {
+        jsonResponse({ ok: false, error: e.message || String(e) });
+    }
+};
+exports.ListContentfulContentTypes.public = true;
+
+exports.ListContentfulContent = function () {
+    response.setContentType('application/json');
+    try {
+        var fetcher = require('*/cartridge/scripts/migration/contentMigration/contentfulContentFetcher');
+        var pageSize = getParam('pageSize') || '100';
+        jsonResponse({ ok: true, result: fetcher.listContentItems(pageSize) });
+    } catch (e) {
+        jsonResponse({ ok: false, error: e.message || String(e) });
+    }
+};
+exports.ListContentfulContent.public = true;
+
+exports.PreviewContentfulLibrary = function () {
+    response.setContentType('application/json');
+    try {
+        var contentIds = parseCmsContentIds();
+        if (!contentIds.length) {
+            jsonResponse({ ok: false, error: 'At least one content item is required' });
+            return;
+        }
+        var selection = {};
+        var selectionRaw = getParam('selection') || '';
+        if (selectionRaw) {
+            try { selection = JSON.parse(selectionRaw); } catch (pe) { selection = {}; }
+        }
+        var runner = require('*/cartridge/scripts/migration/contentMigration/contentfulMigrationRunner');
+        jsonResponse(runner.previewByContentIds(contentIds, selection, {
+            appendFile:     getAmplienceAppendFile('json'),
+            totalRequested: parseInt(getParam('totalRequested') || String(contentIds.length), 10)
+        }));
+    } catch (e) {
+        jsonResponse({ ok: false, error: e.message || String(e) });
+    }
+};
+exports.PreviewContentfulLibrary.public = true;
+
+exports.FetchContentfulContent = function () {
+    response.setContentType('application/json');
+    var deliveryKey = getParam('deliveryKey');
+    var contentId   = getParam('contentId');
+    if (!deliveryKey && !contentId) {
+        jsonResponse({ ok: false, error: 'entryId (contentId) or slug (deliveryKey) is required' });
+        return;
+    }
+    try {
+        var fetcher     = require('*/cartridge/scripts/migration/contentMigration/contentfulContentFetcher');
+        var transformer = require('*/cartridge/scripts/migration/contentMigration/contentfulContentTransformer');
+        var fetched     = contentId
+            ? fetcher.fetchByContentId(contentId)
+            : fetcher.fetchByDeliveryKey(deliveryKey);
+        var widget      = transformer.transformFetchedContent(fetched);
+        jsonResponse({
+            ok:      true,
+            fetched: {
+                deliveryKey:    fetched.deliveryKey || '',
+                contentId:      fetched.contentId || '',
+                hasDeliveryKey: !!fetched.hasDeliveryKey,
+                spaceId:        fetched.spaceId || '',
+                environmentId:  fetched.environmentId || '',
+                source:         fetched.source || ''
+            },
+            widget: widget
+        });
+    } catch (e) {
+        jsonResponse({ ok: false, error: e.message || String(e) });
+    }
+};
+exports.FetchContentfulContent.public = true;
+
+exports.ExportContentfulContent = function () {
+    response.setContentType('application/json');
+    var deliveryKey = getParam('deliveryKey');
+    var contentId   = getParam('contentId');
+    try {
+        var contentIds = parseCmsContentIds();
+        var appendFile = getAmplienceAppendFile('xml');
+        var finalizeRaw = getParam('finalize');
+        var finalize = (!finalizeRaw && finalizeRaw !== '0' && finalizeRaw !== 'false')
+            ? true
+            : (finalizeRaw === '1' || finalizeRaw === 'true');
+        if (!deliveryKey && !contentId && !contentIds.length && !(appendFile && finalize)) {
+            jsonResponse({ ok: false, error: 'entryId, slug, or contentIds is required' });
+            return;
+        }
+        var runner = require('*/cartridge/scripts/migration/contentMigration/contentfulMigrationRunner');
+        var exportOpts = { appendFile: appendFile, finalize: finalize };
+        var result = contentIds.length
+            ? runner.exportByContentIds(contentIds, null, exportOpts)
+            : (contentId
+                ? runner.exportByContentIds(contentId, null, exportOpts)
+                : (appendFile && finalize
+                    ? runner.exportByContentIds([], null, exportOpts)
+                    : runner.exportByDeliveryKeys(deliveryKey)));
+        jsonResponse(result);
+    } catch (e) {
+        jsonResponse({ ok: false, error: e.message || String(e) });
+    }
+};
+exports.ExportContentfulContent.public = true;
+
+exports.ListMigratedContentfulRefs = function () {
+    response.setContentType('application/json');
+    try {
+        var syncRunner = require('*/cartridge/scripts/migration/contentMigration/contentSyncRunner');
+        jsonResponse(syncRunner.listMigratedRefs(getParam('folderId') || 'contentful'));
+    } catch (e) {
+        jsonResponse({ ok: false, error: e.message || String(e) });
+    }
+};
+exports.ListMigratedContentfulRefs.public = true;
 
 /**
  * GET: fileName=<name> — streams content library XML from IMPEX as a download.

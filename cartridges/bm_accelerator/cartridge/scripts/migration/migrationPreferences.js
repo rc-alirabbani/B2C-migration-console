@@ -39,6 +39,7 @@ function applyToConfig(cfg) {
     out.sap = out.sap || {};
     out.sfcc = out.sfcc || {};
     out.amplience = out.amplience || {};
+    out.contentful = out.contentful || {};
 
     out.shopify.storeUrl     = getPref('rcMigShopifyStoreUrl', out.shopify.storeUrl || '');
     out.shopify.clientId     = getPref('rcMigShopifyClientId', out.shopify.clientId || '');
@@ -64,6 +65,15 @@ function applyToConfig(cfg) {
     out.amplience.hubName             = getPref('rcMigAmplienceHubName', out.amplience.hubName || '');
     out.amplience.personalAccessToken = getPref('rcMigAmpliencePersonalAccessToken', out.amplience.personalAccessToken || '');
     out.amplience.defaultDeliveryKey  = getPref('rcMigAmplienceDefaultDeliveryKey', out.amplience.defaultDeliveryKey || '');
+
+    out.contentful.spaceId                = getPref('rcMigContentfulSpaceId', out.contentful.spaceId || '');
+    out.contentful.environmentId          = getPref('rcMigContentfulEnvironmentId', out.contentful.environmentId || 'master');
+    out.contentful.cmaPersonalAccessToken = getPref('rcMigContentfulCmaPersonalAccessToken', out.contentful.cmaPersonalAccessToken || '');
+    out.contentful.apiHost                = getPref('rcMigContentfulApiHost', out.contentful.apiHost || 'https://api.contentful.com');
+    out.contentful.defaultEntryId         = getPref('rcMigContentfulDefaultEntryId', out.contentful.defaultEntryId || '');
+
+    out.cms = out.cms || {};
+    out.cms.contentLibraryId = getPref('rcMigContentLibraryId', out.cms.contentLibraryId || '');
 
     return out;
 }

@@ -138,9 +138,22 @@ var PLATFORMS = [
         kind:        'cms',
         confidence:  90,
         featured:    false,
-        description: 'Retrieve Amplience static content and map it to Salesforce B2C Commerce Page Designer widgets for headless storefront display.',
+        description: 'Retrieve Amplience static content and map it to Salesforce B2C Commerce content for headless storefront display.',
         iconClass:   'platform-icon--amplience',
         connectHint: 'Configure Amplience credentials under Site Preferences → B2C Migration Console, then test the connection.',
+        connectFields: []
+    },
+    {
+        id:          'contentful',
+        name:        'Contentful',
+        tagline:     'Headless CMS, Structured Content',
+        status:      'ready',
+        kind:        'cms',
+        confidence:  90,
+        featured:    false,
+        description: 'Retrieve Contentful entries and map them to Salesforce B2C Commerce content for headless storefront display.',
+        iconClass:   'platform-icon--contentful',
+        connectHint: 'Configure Contentful credentials (Space ID, Environment, CMA token) under Site Preferences → B2C Migration Console, then test the connection.',
         connectFields: []
     },
     {

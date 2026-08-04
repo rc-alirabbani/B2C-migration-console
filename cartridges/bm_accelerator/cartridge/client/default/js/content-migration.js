@@ -8,6 +8,7 @@
     var contentLoaded = false;
     var contentLoading = false;
     var loadContentListFn = null;
+    var hideRepoColumn = false;
     var currentStep = 1;
     var currentDeliveryKey = '';
     var currentContentId = '';
@@ -23,6 +24,7 @@
         if (!root) return {};
         return {
             platformId: root.getAttribute('data-platform-id') || 'amplience',
+            hideRepoFilter: root.getAttribute('data-hide-repo-filter') === 'true',
             connected: root.getAttribute('data-connected') === 'true',
             initialStep: parseInt(root.getAttribute('data-initial-step') || '1', 10),
             testConnectionUrl: root.getAttribute('data-test-connection-url') || '',
@@ -82,7 +84,7 @@
                         ok: false,
                         error: 'Connection test failed — the server returned a Business Manager page instead of JSON'
                             + (status ? ' (HTTP ' + status + ')' : '')
-                            + '. Set Amplience credentials under Site Preferences → B2C Migration Console, then click Test Connection again.'
+                            + '. Set CMS credentials under Site Preferences → B2C Migration Console, then click Test Connection again.'
                             + ' If this persists, run npm run upload:accelerator and import metadata/services.xml.'
                     };
                 }
@@ -95,10 +97,24 @@
             }
 
             if (looksLikeHtml || looksLikeTimeout) {
+                if (context === 'list') {
+                    return {
+                        ok: false,
+                        error: 'Load content failed — the server returned HTML or timed out (HTTP ' + (status || '?')
+                            + '). Try Load Content again, or use Entry ID fetch for a single item.'
+                    };
+                }
                 return {
                     ok: false,
                     error: 'Export timed out on the server (HTTP ' + (status || '?')
                         + '). Retry — batches are smaller now, or filter to fewer items.'
+                };
+            }
+            if (context === 'list') {
+                return {
+                    ok: false,
+                    error: 'Load content failed — server returned non-JSON (HTTP ' + (status || '?') + ')'
+                        + (snippet ? ': ' + snippet : '')
                 };
             }
             return {
@@ -144,7 +160,7 @@
         req.open('GET', url, true);
         req.onreadystatechange = function () {
             if (req.readyState !== 4) return;
-            onDone(parseJsonResponse(req.responseText, 'Parse error', req.status));
+            onDone(parseJsonResponse(req.responseText, 'Parse error', req.status, 'list'));
         };
         req.onerror = function () { onDone({ ok: false, error: 'Network error' }); };
         req.send(null);
@@ -257,6 +273,7 @@
         var i;
         for (i = 0; i < (items || []).length; i++) {
             var key = String(items[i].deliveryKey || '').trim();
+            if (!key) key = String(items[i].id || '').trim();
             if (key) {
                 deliveryKeyInput.value = key;
                 return;
@@ -285,9 +302,6 @@
         }
         if (step === 2) {
             syncDeliveryKeyToStep2();
-            if (connected && loadContentListFn) {
-                loadContentListFn(readCfg(), false);
-            }
         }
         updateFooter(step);
     }
@@ -517,62 +531,32 @@
     }
 
     /**
-     * Render widget preview UI.
-     * @param {Object} widget - mapped widget
-     * @returns {void}
+     * Build preview card HTML from a mapped widget.
+     * @param {Object} widget - mapped widget from the fetch API
+     * @returns {string} HTML for the preview card body
      */
-    function renderPreview(widget) {
-        var emptyEl = document.getElementById('acc-cms-widget-empty');
-        var previewEl = document.getElementById('acc-cms-widget-preview');
-        var errorEl = document.getElementById('acc-cms-widget-error');
-        var cardEl = document.getElementById('acc-cms-preview-card');
-        var badgeEl = document.getElementById('acc-cms-widget-type');
-        var downloads = document.getElementById('acc-cms-export-downloads');
-
-        if (!widget) {
-            if (emptyEl) emptyEl.style.display = '';
-            if (previewEl) previewEl.style.display = 'none';
-            if (errorEl) errorEl.style.display = 'none';
-            currentDeliveryKey = '';
-            currentContentId = '';
-            return;
-        }
-
-        if (emptyEl) emptyEl.style.display = 'none';
-        if (previewEl) previewEl.style.display = '';
-        if (errorEl) errorEl.style.display = 'none';
-        if (downloads) downloads.innerHTML = '';
-        setExportAlert('', '');
-
-        currentDeliveryKey = widget.deliveryKey || '';
-        currentContentId = widget.contentId || currentContentId || '';
-        var schemaLabel = widget.schemaShort || widget.schema || '—';
-        document.getElementById('acc-cms-preview-key').textContent = widget.deliveryKey || '(no delivery key)';
-        document.getElementById('acc-cms-preview-component').textContent = widget.widgetType || '';
-        document.getElementById('acc-cms-preview-schema').textContent = schemaLabel;
-        document.getElementById('acc-cms-preview-json').textContent = JSON.stringify(widget.attributes || {}, null, 2);
-        var sourceJson = document.getElementById('acc-cms-source-json');
-        if (sourceJson) {
-            sourceJson.textContent = JSON.stringify({
-                metadata: widget.sourceMetadata || {},
-                item:     widget.source || {}
-            }, null, 2);
-        }
-        if (badgeEl) badgeEl.textContent = widget.widgetLabel || widget.widgetType || '';
-
+    function buildPreviewCardHtml(widget) {
         var preview = widget.preview || {};
         var attrs = widget.attributes || {};
         var fields = preview.fields || attrs.previewFields || [];
         var images = preview.images || attrs.previewImages || [];
         var html = '<h3 class="cms-preview-card__title">'
-            + escHtml(preview.title || widget.deliveryKey || 'Content')
+            + escHtml(preview.title || widget.deliveryKey || widget.contentId || 'Content')
             + '</h3>';
 
-        if (preview.image) {
-            html += '<img class="cms-preview-card__image" src="' + escHtml(preview.image) + '" alt="" />';
+        var heroImage = preview.image
+            || (images.length && images[0].url)
+            || attrs.imageUrl
+            || '';
+        if (heroImage) {
+            html += '<img class="cms-preview-card__image" src="' + escHtml(heroImage) + '" alt="" />';
         }
         if (preview.body) {
-            html += '<div class="cms-preview-card__body">' + escHtml(preview.body) + '</div>';
+            if (String(preview.body).indexOf('<') >= 0) {
+                html += '<div class="cms-preview-card__body">' + preview.body + '</div>';
+            } else {
+                html += '<div class="cms-preview-card__body">' + escHtml(preview.body) + '</div>';
+            }
         } else if (attrs.richText) {
             html += '<div class="cms-preview-card__body">' + attrs.richText + '</div>';
         } else if (attrs.bannerMessage) {
@@ -584,20 +568,93 @@
                 + '<summary>Component fields (' + (fields.length || images.length) + ')</summary>'
                 + buildFieldsHtml(fields, images)
                 + '</details>';
-        } else if (!preview.body && !preview.image) {
-            html += '<p class="cms-muted">No simple text/image fields found. Open Widget attributes (JSON) if needed.</p>';
+        } else if (!preview.body && !heroImage && !attrs.richText) {
+            html += '<p class="cms-muted">No simple text/image fields found. Open Widget attributes (JSON) on Step 3 if needed.</p>';
+        }
+        return html;
+    }
+
+    /**
+     * Render widget preview UI (Step 2 inline and/or Step 3 full).
+     * @param {Object} widget - mapped widget
+     * @param {string} [mode] - step2 | step3 | both
+     * @returns {void}
+     */
+    function renderPreview(widget, mode) {
+        var view = mode || 'both';
+        if (!widget) {
+            var s2wrap = document.getElementById('acc-cms-step2-item-preview');
+            if (s2wrap) s2wrap.style.display = 'none';
+            var emptyEl = document.getElementById('acc-cms-widget-empty');
+            var previewEl = document.getElementById('acc-cms-widget-preview');
+            if (emptyEl) emptyEl.style.display = '';
+            if (previewEl) previewEl.style.display = 'none';
+            currentDeliveryKey = '';
+            currentContentId = '';
+            return;
         }
 
-        if (cardEl) cardEl.innerHTML = html;
+        var schemaLabel = widget.schemaShort || widget.schema || '—';
+        var keyLabel = widget.deliveryKey || widget.contentId || '(none)';
+        var cardHtml = buildPreviewCardHtml(widget);
+        var badge = widget.widgetLabel || widget.widgetType || '';
+
+        if (view === 'both' || view === 'step2') {
+            var wrap2 = document.getElementById('acc-cms-step2-item-preview');
+            if (wrap2) wrap2.style.display = 'none';
+        }
+
+        if (view === 'both' || view === 'step3') {
+            var emptyEl3 = document.getElementById('acc-cms-widget-empty');
+            var previewEl3 = document.getElementById('acc-cms-widget-preview');
+            var errorEl = document.getElementById('acc-cms-widget-error');
+            var cardEl = document.getElementById('acc-cms-preview-card');
+            var badgeEl = document.getElementById('acc-cms-widget-type');
+            var downloads = document.getElementById('acc-cms-export-downloads');
+
+            if (emptyEl3) emptyEl3.style.display = 'none';
+            if (previewEl3) previewEl3.style.display = '';
+            if (errorEl) errorEl.style.display = 'none';
+            if (downloads) downloads.innerHTML = '';
+            setExportAlert('', '');
+
+            currentDeliveryKey = widget.deliveryKey || '';
+            currentContentId = widget.contentId || currentContentId || '';
+            if (document.getElementById('acc-cms-preview-key')) {
+                document.getElementById('acc-cms-preview-key').textContent = keyLabel;
+            }
+            if (document.getElementById('acc-cms-preview-component')) {
+                document.getElementById('acc-cms-preview-component').textContent = widget.widgetType || '';
+            }
+            if (document.getElementById('acc-cms-preview-schema')) {
+                document.getElementById('acc-cms-preview-schema').textContent = schemaLabel;
+            }
+            if (document.getElementById('acc-cms-preview-json')) {
+                document.getElementById('acc-cms-preview-json').textContent = JSON.stringify(widget.attributes || {}, null, 2);
+            }
+            var sourceJson = document.getElementById('acc-cms-source-json');
+            if (sourceJson) {
+                sourceJson.textContent = JSON.stringify({
+                    metadata:       widget.sourceMetadata || {},
+                    item:           widget.source || {},
+                    resolvedImages: (widget.preview && widget.preview.images)
+                        || (widget.attributes && widget.attributes.previewImages)
+                        || []
+                }, null, 2);
+            }
+            if (badgeEl) badgeEl.textContent = badge;
+            if (cardEl) cardEl.innerHTML = cardHtml;
+        }
     }
 
     /**
      * Fetch and preview content by delivery key or content id.
      * @param {Object} cfg - page config
-     * @param {Object} opts - fetch options
+     * @param {Object} opts - fetch options (goToStep3 opens Step 3)
      * @returns {void}
      */
     function fetchContent(cfg, opts) {
+        var options = opts || {};
         var errorEl = document.getElementById('acc-cms-widget-error');
         if (errorEl) {
             errorEl.style.display = 'none';
@@ -607,13 +664,12 @@
         showStep(3);
 
         var qs = [];
-        // Prefer content id (Management API) so unpublished / keyless items preview reliably.
-        if (opts.contentId) qs.push('contentId=' + encodeURIComponent(opts.contentId));
-        if (opts.deliveryKey && !opts.contentId) {
-            qs.push('deliveryKey=' + encodeURIComponent(opts.deliveryKey));
+        if (options.contentId) qs.push('contentId=' + encodeURIComponent(options.contentId));
+        if (options.deliveryKey && !options.contentId) {
+            qs.push('deliveryKey=' + encodeURIComponent(options.deliveryKey));
         }
-        currentContentId = opts.contentId || '';
-        currentDeliveryKey = opts.deliveryKey || '';
+        currentContentId = options.contentId || '';
+        currentDeliveryKey = options.deliveryKey || '';
 
         var url = cfg.fetchContentUrl
             + (cfg.fetchContentUrl.indexOf('?') >= 0 ? '&' : '?')
@@ -631,7 +687,7 @@
                 if (data.fetched.contentId) currentContentId = data.fetched.contentId;
                 if (data.fetched.deliveryKey) currentDeliveryKey = data.fetched.deliveryKey;
             }
-            renderPreview(data.widget);
+            renderPreview(data.widget, 'step3');
         });
     }
 
@@ -669,7 +725,7 @@
             var built = data.built || 1;
             var lib = data.libraryId ? (' into library "' + data.libraryId + '"') : '';
             setExportAlert(
-                'Exported ' + built + ' content asset(s)' + lib
+                'Exported ' + built + ' content item(s)' + lib
                     + '. Import metadata XML first, then library XML in BM Import & Export.',
                 'ok'
             );
@@ -1066,7 +1122,7 @@
             var hay = (item.label + ' ' + (item.id || '') + ' ' + (item.deliveryKey || '') + ' '
                 + repoVal + ' ' + schemaVal + ' ' + (item.status || '')).toLowerCase();
             var include = true;
-            if (repo && repoVal !== repo && String(item.repoLabel || '').toLowerCase() !== repo) {
+            if (repo && !hideRepoColumn && repoVal !== repo && String(item.repoLabel || '').toLowerCase() !== repo) {
                 include = false;
             }
             if (include && schema && schemaVal !== schema) {
@@ -1101,8 +1157,10 @@
             var id = item.id || '';
             html += '<tr>';
             html += '<td class="cms-col-label"><span class="cms-label-text">' + escHtml(item.label) + '</span></td>';
-            html += '<td class="cms-col-repo">' + escHtml(item.repoLabel || item.repoName || '—') + '</td>';
-            html += '<td class="cms-col-key"><code>' + escHtml(key || '—') + '</code></td>';
+            if (!hideRepoColumn) {
+                html += '<td class="cms-col-repo">' + escHtml(item.repoLabel || item.repoName || '—') + '</td>';
+            }
+            html += '<td class="cms-col-key"><code>' + escHtml(key || id || '—') + '</code></td>';
             html += '<td class="cms-col-schema">' + escHtml(item.schemaShort || '—') + '</td>';
             html += '<td class="cms-col-status">' + escHtml(item.status || '—') + '</td>';
             html += '<td class="cms-col-action">';
@@ -1213,6 +1271,13 @@
             suggestFirstDeliveryKey(allItems);
             fillFilterOptions(result.repositories || [], result.schemas || []);
             applyFilters();
+            if (listStatus && result.truncated && result.total > (result.loaded || allItems.length)) {
+                setStatus(
+                    listStatus,
+                    (result.loaded || allItems.length) + ' loaded (' + result.total + ' in space — first page only)',
+                    false
+                );
+            }
         });
     }
 
@@ -1238,6 +1303,13 @@
      */
     function init() {
         var cfg = readCfg();
+        hideRepoColumn = cfg.hideRepoFilter;
+        if (hideRepoColumn) {
+            var repoFilter = document.querySelector('.cms-filters__repo');
+            if (repoFilter) repoFilter.style.display = 'none';
+            var repoHeader = document.querySelector('.cms-content-table .cms-col-repo');
+            if (repoHeader) repoHeader.style.display = 'none';
+        }
         var testBtn = document.getElementById('acc-cms-test-btn');
         var prevBtn = document.getElementById('acc-cms-prev');
         var nextBtn = document.getElementById('acc-cms-next');
@@ -1298,7 +1370,11 @@
                     updateFooter(currentStep);
                     syncDeliveryKeyToStep2();
                     var name = (data.project && (data.project.name || data.project.key)) || 'Connected';
-                    setStatus(connStatus, 'Connected to ' + name, false);
+                    var msg = 'Connected to ' + name;
+                    if (data.warning) {
+                        msg += '. ' + data.warning;
+                    }
+                    setStatus(connStatus, msg, false);
                 }, 'connect');
             });
         }
@@ -1320,7 +1396,7 @@
             fetchBtn.addEventListener('click', function () {
                 var key = (document.getElementById('acc-cms-delivery-key').value || '').trim();
                 if (!key) return;
-                fetchContent(cfg, { deliveryKey: key });
+                fetchContent(cfg, { deliveryKey: key, contentId: /^[a-zA-Z0-9]{10,}$/.test(key) ? key : '' });
             });
         }
 
