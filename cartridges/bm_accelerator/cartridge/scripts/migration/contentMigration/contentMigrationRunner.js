@@ -4,7 +4,6 @@ var fileResolver = require('*/cartridge/scripts/migration/core/migrationFileReso
 var fetcher      = require('*/cartridge/scripts/migration/contentMigration/amplienceContentFetcher');
 var transformer  = require('*/cartridge/scripts/migration/contentMigration/amplienceContentTransformer');
 var xmlBuilder   = require('*/cartridge/scripts/migration/contentMigration/contentXmlBuilder');
-var metaBuilder  = require('*/cartridge/scripts/migration/contentMigration/contentMetaXmlBuilder');
 
 var MODULE_KEY = 'content';
 /** Keep small — each item is a sequential Amplience call inside BM request limits. */
@@ -160,7 +159,6 @@ function buildAssetFragments(widgets) {
 function writeWidgetsXml(widgets, libraryId, appendFile, finalize) {
     var relDir = ensureDir();
     var contentFileName;
-    var metaFileName;
     var fragments = buildAssetFragments(widgets);
     var closeLibrary = finalize === true || (finalize !== false && !appendFile);
     var libId = xmlBuilder.resolveLibraryId(libraryId);
@@ -174,21 +172,13 @@ function writeWidgetsXml(widgets, libraryId, appendFile, finalize) {
             fragments.xml + (closeLibrary ? '</library>\n' : ''),
             true
         );
-        metaFileName = contentFileName.replace(/\.xml$/, '-meta.xml');
-        if (metaFileName === contentFileName) metaFileName = 'content-meta.xml';
-        var File = require('dw/io/File');
-        var metaPath = new File(File.IMPEX + File.SEPARATOR + relDir + File.SEPARATOR + metaFileName);
-        if (!metaPath.exists()) {
-            writeFile(relDir, metaFileName, metaBuilder.buildMetaXml());
-        }
         return {
             ok:           true,
             built:        fragments.ids.length,
             contentIds:   fragments.ids,
             libraryId:    libId,
             fileName:     contentFileName,
-            metaFileName: metaFileName,
-            fileNames:    [metaFileName, contentFileName],
+            fileNames:    [contentFileName],
             appended:     true,
             finalized:    closeLibrary,
             impexPath:    fileResolver.getRelativePath(MODULE_KEY)
@@ -197,13 +187,8 @@ function writeWidgetsXml(widgets, libraryId, appendFile, finalize) {
 
     var catalogResult = xmlBuilder.buildXml(widgets, libraryId, { close: closeLibrary });
     contentFileName = fileResolver.resolveXmlFileName(MODULE_KEY, 0, 1, 'local');
-    metaFileName = contentFileName.replace(/\.xml$/, '-meta.xml');
-    if (metaFileName === contentFileName) {
-        metaFileName = 'content-meta.xml';
-    }
 
     writeFile(relDir, contentFileName, catalogResult.xml);
-    writeFile(relDir, metaFileName, metaBuilder.buildMetaXml());
 
     return {
         ok:           true,
@@ -211,8 +196,7 @@ function writeWidgetsXml(widgets, libraryId, appendFile, finalize) {
         contentIds:   catalogResult.contentIds,
         libraryId:    catalogResult.libraryId,
         fileName:     contentFileName,
-        metaFileName: metaFileName,
-        fileNames:    [metaFileName, contentFileName],
+        fileNames:    [contentFileName],
         appended:     false,
         finalized:    closeLibrary,
         impexPath:    fileResolver.getRelativePath(MODULE_KEY)
@@ -414,9 +398,6 @@ function exportByContentIds(contentIds, libraryId, opts) {
             failed:       errors.length,
             errors:       errors,
             fileName:     appendFile,
-            metaFileName: appendFile
-                ? String(appendFile).replace(/\.xml$/, '-meta.xml')
-                : '',
             fileNames:    [],
             batchSize:    MAX_BATCH,
             impexPath:    fileResolver.getRelativePath(MODULE_KEY)

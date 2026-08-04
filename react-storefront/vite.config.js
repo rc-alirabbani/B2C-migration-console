@@ -7,6 +7,7 @@ import react from '@vitejs/plugin-react';
 
 const require = createRequire(import.meta.url);
 const { createAmpliencePreviewMiddleware } = require('./amplience-preview-middleware.cjs');
+const { createContentfulDevMiddleware } = require('./contentful-dev-middleware.cjs');
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -49,6 +50,14 @@ export default defineConfig(({ mode }) => {
     const sfcc = resolveSfccStorefront(env);
     const sfccConfigured = !!sfcc.storefrontUrl;
 
+    if (sfccConfigured) {
+        // eslint-disable-next-line no-console
+        console.log('[react-storefront] SFCC proxy:', sfcc.storefrontUrl);
+    } else {
+        // eslint-disable-next-line no-console
+        console.warn('[react-storefront] SFCC proxy disabled — set hostname in dw.json or VITE_SFCC_STOREFRONT_URL');
+    }
+
     return {
         plugins: [
             react({ include: /\.(jsx|js|tsx|ts)$/ }),
@@ -56,6 +65,7 @@ export default defineConfig(({ mode }) => {
                 name: 'amplience-preview-api',
                 configureServer(server) {
                     server.middlewares.use(createAmpliencePreviewMiddleware(env));
+                    server.middlewares.use(createContentfulDevMiddleware(env));
                 }
             }
         ],

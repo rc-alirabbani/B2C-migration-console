@@ -57,6 +57,68 @@ function buildDescription(widget) {
     return parts.join(' | ') || 'Migrated Contentful content';
 }
 
+/**
+ * Clone plain JSON for IMPEX (Rhino-safe snapshot of CMA entry + fields).
+ * @param {Object} value
+ * @returns {Object|null}
+ */
+function cloneJsonValue(value) {
+    if (value === null || value === undefined) return null;
+    try {
+        return JSON.parse(JSON.stringify(value));
+    } catch (e) {
+        return null;
+    }
+}
+
+/**
+ * @param {Object} widget
+ * @returns {{ metadata: Object, fields: Object, entry: Object|null }}
+ */
+function buildSourcePayload(widget) {
+    var src = (widget && widget.source) || {};
+    var attrs = (widget && widget.attributes) || {};
+    var fields = src.fields || attrs.entryFields || {};
+    var entry = src.entry || null;
+
+    if (!entry && fields && typeof fields === 'object') {
+        entry = {
+            sys: {
+                id:         widget.contentId || attrs.entryId || '',
+                type:       'Entry',
+                contentType: {
+                    sys: {
+                        type: 'Link',
+                        linkType: 'ContentType',
+                        id: widget.schema || attrs.contentTypeId || ''
+                    }
+                }
+            },
+            fields: fields
+        };
+    } else if (entry && !entry.fields && fields) {
+        entry = {
+            sys:  entry.sys || {},
+            fields: fields
+        };
+    }
+
+    return {
+        metadata: widget.sourceMetadata || {},
+        fields:   cloneJsonValue(fields) || fields || {},
+        entry:    cloneJsonValue(entry) || entry
+    };
+}
+
+/**
+ * JSON payload for contentfulSourceJson (full CMA entry + fields for React/storefront).
+ * @param {Object} widget
+ * @returns {string}
+ */
+function buildSourceJson(widget) {
+    return JSON.stringify(buildSourcePayload(widget));
+}
+
 function buildContentAssetXml(widget) {
     var contentId   = sanitizeContentId(widget);
     var displayName = (widget.preview && widget.preview.title)
@@ -64,11 +126,15 @@ function buildContentAssetXml(widget) {
         || widget.contentId
         || contentId;
     var bodyHtml    = buildBodyHtml(widget);
-    var attrsJson   = JSON.stringify(widget.attributes || {});
-    var sourceJson  = JSON.stringify({
-        metadata: widget.sourceMetadata || {},
-        item:     widget.source || {}
-    });
+    var attrs       = widget.attributes || {};
+    var attrsForXml = cloneJsonValue(attrs) || attrs;
+    if (attrsForXml && typeof attrsForXml === 'object') {
+        var payload = buildSourcePayload(widget);
+        attrsForXml.entry = payload.entry;
+        attrsForXml.entryFields = payload.fields;
+    }
+    var attrsJson   = JSON.stringify(attrsForXml || {});
+    var sourceJson  = buildSourceJson(widget);
     var lines       = [];
 
     lines.push('  <content content-id="' + escapeXml(contentId) + '">');

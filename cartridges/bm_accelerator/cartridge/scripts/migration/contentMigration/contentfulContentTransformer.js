@@ -157,6 +157,8 @@ function transformFetchedContent(fetched) {
         primaryImage = previewImages[0].url || '';
     }
     var previewFields = mergePreviewImageFields(extracted.fields, previewImages);
+    var rawEntry = fetched.rawItem || null;
+    var entryFields = content;
 
     return {
         widgetType:     WIDGET_TYPE,
@@ -182,14 +184,19 @@ function transformFetchedContent(fetched) {
             richText:      body,
             previewFields: previewFields,
             previewImages: previewImages,
-            imageUrl:      primaryImage
+            imageUrl:      primaryImage,
+            entryFields:   entryFields
         },
-        source:         content,
+        source: {
+            fields: entryFields,
+            entry:  rawEntry
+        },
         sourceMetadata: {
             status:         fetched.status || '',
             locale:         locale,
             spaceId:        fetched.spaceId || '',
             environmentId:  fetched.environmentId || '',
+            contentTypeId:  contentTypeId,
             resolvedImages: previewImages
         }
     };

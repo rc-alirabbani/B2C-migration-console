@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Content object type cleanup - keep Amplience only.
+
+    Use this INSTEAD OF metadata/meta/system-objecttype-extensions.xml when this
+    org should expose Amplience fields only. That install file declares BOTH CMS
+    groups, so importing it is what makes both sections appear on every asset.
+
+    Import via Administration > Site Development > Import & Export > Meta Data,
+    WITH "Delete existing attribute definitions and attribute groups not
+    contained in the import file" CHECKED. Without that checkbox nothing is
+    deleted - the import only re-creates what is already there.
+
+    Result on the Content system object type:
+      kept    : amplience* attributes + Amplience group
+      removed : contentful* attributes + Contentful group
+      removed : rcCms* attributes + CMS Migration group
+      removed : ANY other custom Content attribute not listed below
+
+    Only the Content type is touched; Site Preferences (rcMig*) are unaffected.
+    Export the current Content metadata first as a backup.
+
+    After this import the Contentful gallery cannot store or render data on this
+    org - its wizard export still emits contentful* fields, but the library
+    import will drop them.
+-->
+<metadata xmlns="http://www.demandware.com/xml/impex/metadata/2006-10-31">
+    <type-extension type-id="Content">
+        <custom-attribute-definitions>
+            <attribute-definition attribute-id="amplienceDeliveryKey">
+                <display-name xml:lang="x-default">Amplience Delivery Key</display-name>
+                <description xml:lang="x-default">Migrated Amplience CMS field</description>
+                <type>string</type>
+                <localizable-flag>false</localizable-flag>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="amplienceContentId">
+                <display-name xml:lang="x-default">Amplience Content ID</display-name>
+                <description xml:lang="x-default">Migrated Amplience CMS field</description>
+                <type>string</type>
+                <localizable-flag>false</localizable-flag>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="amplienceWidgetType">
+                <display-name xml:lang="x-default">Amplience Widget Type</display-name>
+                <description xml:lang="x-default">Migrated Amplience CMS field</description>
+                <type>string</type>
+                <localizable-flag>false</localizable-flag>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="amplienceSchema">
+                <display-name xml:lang="x-default">Amplience Schema</display-name>
+                <description xml:lang="x-default">Migrated Amplience CMS field</description>
+                <type>string</type>
+                <localizable-flag>false</localizable-flag>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="amplienceWidgetAttributes">
+                <display-name xml:lang="x-default">Amplience Widget Attributes</display-name>
+                <description xml:lang="x-default">Migrated Amplience CMS field</description>
+                <type>text</type>
+                <localizable-flag>false</localizable-flag>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="amplienceSourceJson">
+                <display-name xml:lang="x-default">Amplience Source JSON</display-name>
+                <description xml:lang="x-default">Migrated Amplience CMS field</description>
+                <type>text</type>
+                <localizable-flag>false</localizable-flag>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="amplienceImageUrl">
+                <display-name xml:lang="x-default">Amplience Image URL</display-name>
+                <description xml:lang="x-default">Migrated Amplience CMS field</description>
+                <type>string</type>
+                <localizable-flag>false</localizable-flag>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+        </custom-attribute-definitions>
+        <group-definitions>
+            <attribute-group group-id="Amplience">
+                <display-name xml:lang="x-default">Amplience</display-name>
+                <attribute attribute-id="amplienceDeliveryKey"/>
+                <attribute attribute-id="amplienceContentId"/>
+                <attribute attribute-id="amplienceWidgetType"/>
+                <attribute attribute-id="amplienceSchema"/>
+                <attribute attribute-id="amplienceWidgetAttributes"/>
+                <attribute attribute-id="amplienceSourceJson"/>
+                <attribute attribute-id="amplienceImageUrl"/>
+            </attribute-group>
+        </group-definitions>
+    </type-extension>
+</metadata>

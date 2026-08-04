@@ -13,14 +13,25 @@ var path = require('path');
 
 var ROOT = path.resolve(__dirname, '..');
 var OUT = path.join(ROOT, 'react-storefront/public/amplience-catalog.json');
+var OUT_CONTENTFUL = path.join(ROOT, 'react-storefront/public/contentful-catalog.json');
 var STALE_MS = 15 * 60 * 1000;
 var FORCE_SYNC = process.argv.indexOf('--force') >= 0;
 var PROBE_CDN = process.argv.indexOf('--probe-cdn') >= 0;
 
 function isCatalogFresh() {
-    if (!fs.existsSync(OUT)) return false;
+    if (!fs.existsSync(OUT) || !fs.existsSync(OUT_CONTENTFUL)) return false;
     var stat = fs.statSync(OUT);
-    return (Date.now() - stat.mtimeMs) < STALE_MS;
+    var ctfStat = fs.statSync(OUT_CONTENTFUL);
+    var fresh = (Date.now() - stat.mtimeMs) < STALE_MS;
+    if (!fresh) return false;
+    try {
+        var ctf = JSON.parse(fs.readFileSync(OUT_CONTENTFUL, 'utf8'));
+        if (!ctf || !Array.isArray(ctf.items) || !ctf.items.length) return false;
+        if (ctf.source === 'placeholder') return false;
+    } catch (e) {
+        return false;
+    }
+    return (Date.now() - ctfStat.mtimeMs) < STALE_MS;
 }
 
 function sleep(ms) {
@@ -58,6 +69,52 @@ function resolveStorefrontBase(env) {
     var locale = env.SFCC_LOCALE || env.VITE_SFCC_LOCALE || 'en_US';
     return 'https://' + hostname
         + '/on/demandware.store/Sites-' + siteId + '-Site/' + locale;
+}
+
+async function fetchContentfulCatalogPage(baseUrl, page, pageSize) {
+    var url = baseUrl + '/ContentfulContent-List?page=' + page + '&pageSize=' + pageSize;
+    var res = await fetch(url, {
+        headers: { Accept: 'application/json' }
+    });
+    if (res.status !== 200) {
+        var body = '';
+        try { body = await res.text(); } catch (e) { body = ''; }
+        throw new Error('SFCC Contentful catalog failed (' + res.status + ') for ' + url
+            + (body ? ' — upload app_custom_cms and open ContentfulContent-List on storefront' : ''));
+    }
+    var payload = await res.json();
+    if (!payload || !payload.ok) {
+        throw new Error((payload && payload.error) || 'SFCC Contentful catalog response was not ok');
+    }
+    return payload;
+}
+
+async function syncContentfulFromSfcc(baseUrl) {
+    var page = 1;
+    var pageSize = 48;
+    var allItems = [];
+    var lastPayload = null;
+
+    while (page < 100) {
+        var payload = await fetchContentfulCatalogPage(baseUrl, page, pageSize);
+        lastPayload = payload;
+        allItems = allItems.concat(payload.items || []);
+        if (!payload.hasNext) break;
+        page += 1;
+        await sleep(200);
+    }
+
+    var output = {
+        ok: true,
+        source: 'sfcc',
+        storefrontUrl: baseUrl,
+        total: lastPayload ? lastPayload.total : allItems.length,
+        exportedAt: new Date().toISOString(),
+        items: allItems
+    };
+    fs.mkdirSync(path.dirname(OUT_CONTENTFUL), { recursive: true });
+    fs.writeFileSync(OUT_CONTENTFUL, JSON.stringify(output, null, 2), 'utf8');
+    console.log('Synced', allItems.length, 'Contentful entries to', OUT_CONTENTFUL);
 }
 
 async function fetchCatalogPage(baseUrl, page, pageSize) {
@@ -139,8 +196,8 @@ async function main() {
             return;
         } catch (err) {
             console.warn('SFCC catalog sync failed:', err.message || err);
-            if (fs.existsSync(OUT)) {
-                console.warn('Keeping existing amplience-catalog.json');
+            if (fs.existsSync(OUT) && fs.existsSync(OUT_CONTENTFUL)) {
+                console.warn('Keeping existing amplience-catalog.json and contentful-catalog.json');
                 return;
             }
             console.warn('Falling back to Amplience Management API export...');
@@ -183,6 +240,19 @@ async function syncFromSfcc(baseUrl, env) {
         items: allItems
     });
     console.log('Synced', allItems.length, 'SFCC components to', OUT);
+    try {
+        await syncContentfulFromSfcc(baseUrl);
+    } catch (ctfErr) {
+        console.warn('Contentful catalog sync failed:', ctfErr.message || ctfErr);
+        if (!fs.existsSync(OUT_CONTENTFUL)) {
+            fs.writeFileSync(OUT_CONTENTFUL, JSON.stringify({
+                ok: true,
+                source: 'sfcc',
+                total: 0,
+                items: []
+            }, null, 2), 'utf8');
+        }
+    }
 }
 
 function inferWidgetType(schema, schemaShort) {

@@ -4,7 +4,6 @@ var fileResolver = require('*/cartridge/scripts/migration/core/migrationFileReso
 var fetcher      = require('*/cartridge/scripts/migration/contentMigration/contentfulContentFetcher');
 var transformer  = require('*/cartridge/scripts/migration/contentMigration/contentfulContentTransformer');
 var xmlBuilder   = require('*/cartridge/scripts/migration/contentMigration/contentfulXmlBuilder');
-var metaBuilder  = require('*/cartridge/scripts/migration/contentMigration/contentfulMetaXmlBuilder');
 
 var MODULE_KEY = 'content';
 /** Keep small — each item is a sequential Contentful CMA call inside BM request limits. */
@@ -84,6 +83,75 @@ function transformFetchedItems(fetchedItems) {
     return widgets;
 }
 
+/**
+ * Ensure preview JSON widgets have source.entry before library XML export.
+ * @param {Object[]} widgets
+ * @returns {Object[]}
+ */
+function normalizeWidgetsForExport(widgets) {
+    var out = [];
+    var i;
+    for (i = 0; i < (widgets || []).length; i++) {
+        var widget = widgets[i];
+        if (!widget || typeof widget !== 'object') continue;
+        if (!widget.source || typeof widget.source !== 'object') {
+            widget.source = {};
+        }
+        if (!widget.source.entry && widget.attributes && widget.attributes.entry) {
+            widget.source.entry = widget.attributes.entry;
+        }
+        if (!widget.source.fields && widget.attributes && widget.attributes.entryFields) {
+            widget.source.fields = widget.attributes.entryFields;
+        }
+        out.push(widget);
+    }
+    return out;
+}
+
+/**
+ * Write library XML in batches (shared by CMA export and preview-json export).
+ * @param {Object[]} widgets
+ * @param {string} [libraryId]
+ * @returns {Object}
+ */
+function writeWidgetsXmlBatched(widgets, libraryId) {
+    var list = widgets || [];
+    var fileName = '';
+    var library = '';
+    var built = 0;
+    var contentIds = [];
+    var i = 0;
+    var result;
+
+    while (i < list.length) {
+        var chunk = list.slice(i, i + MAX_BATCH);
+        var finalize = i + MAX_BATCH >= list.length;
+        result = writeWidgetsXml(chunk, libraryId, fileName || '', finalize);
+        fileName = result.fileName || fileName;
+        library = result.libraryId || library;
+        built += result.built || 0;
+        if (result.contentIds && result.contentIds.length) {
+            contentIds = contentIds.concat(result.contentIds);
+        }
+        i += MAX_BATCH;
+    }
+
+    if (!fileName) {
+        return { ok: false, error: 'No content exported.' };
+    }
+
+    return {
+        ok:         true,
+        built:      built,
+        contentIds: contentIds,
+        libraryId:  library,
+        fileName:   fileName,
+        fileNames:  [fileName],
+        impexPath:  fileResolver.getRelativePath(MODULE_KEY),
+        fromPreview: true
+    };
+}
+
 function collectContentTypes(widgets) {
     var seen = {};
     var types = [];
@@ -160,7 +228,6 @@ function buildAssetFragments(widgets) {
 function writeWidgetsXml(widgets, libraryId, appendFile, finalize) {
     var relDir = ensureDir();
     var contentFileName;
-    var metaFileName;
     var fragments = buildAssetFragments(widgets);
     var closeLibrary = finalize === true || (finalize !== false && !appendFile);
     var libId = xmlBuilder.resolveLibraryId(libraryId);
@@ -174,21 +241,13 @@ function writeWidgetsXml(widgets, libraryId, appendFile, finalize) {
             fragments.xml + (closeLibrary ? '</library>\n' : ''),
             true
         );
-        metaFileName = contentFileName.replace(/\.xml$/, '-meta.xml');
-        if (metaFileName === contentFileName) metaFileName = 'content-meta.xml';
-        var File = require('dw/io/File');
-        var metaPath = new File(File.IMPEX + File.SEPARATOR + relDir + File.SEPARATOR + metaFileName);
-        if (!metaPath.exists()) {
-            writeFile(relDir, metaFileName, metaBuilder.buildMetaXml());
-        }
         return {
             ok:           true,
             built:        fragments.ids.length,
             contentIds:   fragments.ids,
             libraryId:    libId,
             fileName:     contentFileName,
-            metaFileName: metaFileName,
-            fileNames:    [metaFileName, contentFileName],
+            fileNames:    [contentFileName],
             appended:     true,
             finalized:    closeLibrary,
             impexPath:    fileResolver.getRelativePath(MODULE_KEY)
@@ -197,13 +256,8 @@ function writeWidgetsXml(widgets, libraryId, appendFile, finalize) {
 
     var catalogResult = xmlBuilder.buildXml(widgets, libraryId, { close: closeLibrary });
     contentFileName = fileResolver.resolveXmlFileName(MODULE_KEY, 0, 1, 'local');
-    metaFileName = contentFileName.replace(/\.xml$/, '-meta.xml');
-    if (metaFileName === contentFileName) {
-        metaFileName = 'content-meta.xml';
-    }
 
     writeFile(relDir, contentFileName, catalogResult.xml);
-    writeFile(relDir, metaFileName, metaBuilder.buildMetaXml());
 
     return {
         ok:           true,
@@ -211,8 +265,7 @@ function writeWidgetsXml(widgets, libraryId, appendFile, finalize) {
         contentIds:   catalogResult.contentIds,
         libraryId:    catalogResult.libraryId,
         fileName:     contentFileName,
-        metaFileName: metaFileName,
-        fileNames:    [metaFileName, contentFileName],
+        fileNames:    [contentFileName],
         appended:     false,
         finalized:    closeLibrary,
         impexPath:    fileResolver.getRelativePath(MODULE_KEY)
@@ -414,9 +467,6 @@ function exportByContentIds(contentIds, libraryId, opts) {
             failed:       errors.length,
             errors:       errors,
             fileName:     appendFile,
-            metaFileName: appendFile
-                ? String(appendFile).replace(/\.xml$/, '-meta.xml')
-                : '',
             fileNames:    [],
             batchSize:    MAX_BATCH,
             impexPath:    fileResolver.getRelativePath(MODULE_KEY)
@@ -430,9 +480,43 @@ function exportByContentIds(contentIds, libraryId, opts) {
     return result;
 }
 
+/**
+ * Build library IMPEX from an existing preview JSON file (same payload as Preview JSON button).
+ * @param {string} previewFileName
+ * @param {string} [libraryId]
+ * @returns {Object}
+ */
+function exportFromPreviewFile(previewFileName, libraryId) {
+    var name = String(previewFileName || '').trim();
+    if (!name || !/^[a-zA-Z0-9_\-]+\.json$/.test(name)) {
+        return { ok: false, error: 'Valid previewFile name is required (*.json).' };
+    }
+    var relDir = ensureDir();
+    var text = readFile(relDir, name);
+    if (!text) {
+        return { ok: false, error: 'Preview file not found in IMPEX: ' + name };
+    }
+    var preview;
+    try {
+        preview = JSON.parse(text);
+    } catch (e) {
+        return { ok: false, error: 'Preview file is not valid JSON: ' + name };
+    }
+    var widgets = normalizeWidgetsForExport(preview.items || []);
+    if (!widgets.length) {
+        return { ok: false, error: 'Preview file has no items to export.' };
+    }
+    var result = writeWidgetsXmlBatched(widgets, libraryId);
+    result.previewFile = name;
+    result.failed = (preview.errors && preview.errors.length) || 0;
+    result.errors = preview.errors || [];
+    return result;
+}
+
 module.exports = {
     MAX_BATCH:            MAX_BATCH,
     exportByDeliveryKeys: exportByDeliveryKeys,
     exportByContentIds:   exportByContentIds,
-    previewByContentIds:  previewByContentIds
+    previewByContentIds:  previewByContentIds,
+    exportFromPreviewFile: exportFromPreviewFile
 };

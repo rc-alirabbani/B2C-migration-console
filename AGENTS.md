@@ -25,8 +25,8 @@ Royal Cyber SFCC BM cartridge for schema + data migration from commercetools/Sho
 ## CMS architecture (`app_custom_cms`)
 - **Generic storefront cartridge** for headless CMS integrations (Amplience today; Contentful etc. later)
 - **Amplience today:** `AmplienceContent-List` API, migrated content helpers under `scripts/helpers/amplience*`
-- **React gallery:** reads `AmplienceContent-List` (not SFRA ISML storefront)
-- **Catalog:** SFCC `amplience/` folder → `AmplienceContent-List`
+- **Contentful:** `ContentfulContent-List` / `ContentfulContent-Detail` from SFCC `contentful/` folder
+- **React gallery:** reads `AmplienceContent-List` and `ContentfulContent-List` (or synced JSON catalogs)
 - **Deploy:** `npm run upload:cms` (alias: `upload:amplience`)
 
 ## SFCC cartridge paths

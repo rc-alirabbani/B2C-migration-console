@@ -955,6 +955,7 @@ function matchesQuery(model, query) {
  */
 function resolveFromContentAsset(asset) {
     if (!asset || !asset.online || !asset.custom) return null;
+    if (String(asset.ID || '').indexOf('ctf-') === 0) return null;
 
     var custom = asset.custom;
     var attributes = parseJsonSafe(custom.amplienceWidgetAttributes, {}) || {};

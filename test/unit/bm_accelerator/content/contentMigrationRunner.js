@@ -102,9 +102,6 @@ describe('Amplience content migration runner', function () {
                 sanitizeContentId: function (widget) { return widget.contentId; },
                 resolveLibraryId: function () { return 'site'; }
             },
-            '*/cartridge/scripts/migration/contentMigration/contentMetaXmlBuilder': {
-                buildMetaXml: function () { return '<metadata/>'; }
-            },
             '*/cartridge/scripts/migration/core/migrationPaths': {
                 getRelativePath: function () { return 'src/migration/content'; }
             },
@@ -139,8 +136,7 @@ describe('Amplience content migration runner', function () {
             '*/cartridge/scripts/migration/core/migrationFileResolver': {},
             '*/cartridge/scripts/migration/contentMigration/amplienceContentFetcher': {},
             '*/cartridge/scripts/migration/contentMigration/amplienceContentTransformer': {},
-            '*/cartridge/scripts/migration/contentMigration/contentXmlBuilder': {},
-            '*/cartridge/scripts/migration/contentMigration/contentMetaXmlBuilder': {}
+            '*/cartridge/scripts/migration/contentMigration/contentXmlBuilder': {}
         });
         var ids = [];
         var i;

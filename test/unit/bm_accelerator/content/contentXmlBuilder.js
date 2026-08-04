@@ -3,12 +3,17 @@
 /* global describe, it */
 
 var expect = require('chai').expect;
+var fs = require('fs');
+var path = require('path');
 var loader = require('../helpers/cartridgeLoader');
 
 loader.installCartridgeResolver();
 
 var xmlBuilder = loader.requireCartridge('contentMigration/contentXmlBuilder');
-var metaBuilder = loader.requireCartridge('contentMigration/contentMetaXmlBuilder');
+var META_PATH = path.resolve(
+    __dirname,
+    '../../../../metadata/meta/system-objecttype-extensions.xml'
+);
 
 describe('Amplience content library XML', function () {
     var widget = {
@@ -55,11 +60,13 @@ describe('Amplience content library XML', function () {
         expect(result.xml).to.contain(']]]]><![CDATA[>');
     });
 
-    it('defines source JSON metadata for Content assets', function () {
-        var xml = metaBuilder.buildMetaXml();
+    it('declares both CMS attribute groups in the install metadata', function () {
+        var xml = fs.readFileSync(META_PATH, 'utf8');
 
         expect(xml).to.contain('<type-extension type-id="Content">');
         expect(xml).to.contain('attribute-id="amplienceSourceJson"');
+        expect(xml).to.contain('attribute-id="contentfulSourceJson"');
         expect(xml).to.contain('<attribute-group group-id="Amplience">');
+        expect(xml).to.contain('<attribute-group group-id="Contentful">');
     });
 });

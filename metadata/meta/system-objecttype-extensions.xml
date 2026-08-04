@@ -217,4 +217,144 @@
             </attribute-group>
         </group-definitions>
     </type-extension>
+
+    <type-extension type-id="Content">
+        <custom-attribute-definitions>
+            <attribute-definition attribute-id="amplienceDeliveryKey">
+                <display-name xml:lang="x-default">Amplience Delivery Key</display-name>
+                <description xml:lang="x-default">Migrated Amplience CMS field</description>
+                <type>string</type>
+                <localizable-flag>false</localizable-flag>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="amplienceContentId">
+                <display-name xml:lang="x-default">Amplience Content ID</display-name>
+                <description xml:lang="x-default">Migrated Amplience CMS field</description>
+                <type>string</type>
+                <localizable-flag>false</localizable-flag>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="amplienceWidgetType">
+                <display-name xml:lang="x-default">Amplience Widget Type</display-name>
+                <description xml:lang="x-default">Migrated Amplience CMS field</description>
+                <type>string</type>
+                <localizable-flag>false</localizable-flag>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="amplienceSchema">
+                <display-name xml:lang="x-default">Amplience Schema</display-name>
+                <description xml:lang="x-default">Migrated Amplience CMS field</description>
+                <type>string</type>
+                <localizable-flag>false</localizable-flag>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="amplienceWidgetAttributes">
+                <display-name xml:lang="x-default">Amplience Widget Attributes</display-name>
+                <description xml:lang="x-default">Migrated Amplience CMS field</description>
+                <type>text</type>
+                <localizable-flag>false</localizable-flag>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="amplienceSourceJson">
+                <display-name xml:lang="x-default">Amplience Source JSON</display-name>
+                <description xml:lang="x-default">Migrated Amplience CMS field</description>
+                <type>text</type>
+                <localizable-flag>false</localizable-flag>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="amplienceImageUrl">
+                <display-name xml:lang="x-default">Amplience Image URL</display-name>
+                <description xml:lang="x-default">Migrated Amplience CMS field</description>
+                <type>string</type>
+                <localizable-flag>false</localizable-flag>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+
+            <attribute-definition attribute-id="contentfulEntryId">
+                <display-name xml:lang="x-default">Contentful Entry ID</display-name>
+                <description xml:lang="x-default">Migrated Contentful CMS field</description>
+                <type>string</type>
+                <localizable-flag>false</localizable-flag>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="contentfulContentType">
+                <display-name xml:lang="x-default">Contentful Content Type</display-name>
+                <description xml:lang="x-default">Migrated Contentful CMS field</description>
+                <type>string</type>
+                <localizable-flag>false</localizable-flag>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="contentfulSlug">
+                <display-name xml:lang="x-default">Contentful Slug</display-name>
+                <description xml:lang="x-default">Migrated Contentful CMS field</description>
+                <type>string</type>
+                <localizable-flag>false</localizable-flag>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="contentfulWidgetType">
+                <display-name xml:lang="x-default">Contentful Widget Type</display-name>
+                <description xml:lang="x-default">Migrated Contentful CMS field</description>
+                <type>string</type>
+                <localizable-flag>false</localizable-flag>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="contentfulWidgetAttributes">
+                <display-name xml:lang="x-default">Contentful Widget Attributes</display-name>
+                <description xml:lang="x-default">Migrated Contentful CMS field</description>
+                <type>text</type>
+                <localizable-flag>false</localizable-flag>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="contentfulSourceJson">
+                <display-name xml:lang="x-default">Contentful Source JSON</display-name>
+                <description xml:lang="x-default">Migrated Contentful CMS field</description>
+                <type>text</type>
+                <localizable-flag>false</localizable-flag>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="contentfulImageUrl">
+                <display-name xml:lang="x-default">Contentful Image URL</display-name>
+                <description xml:lang="x-default">Migrated Contentful CMS field</description>
+                <type>string</type>
+                <localizable-flag>false</localizable-flag>
+                <mandatory-flag>false</mandatory-flag>
+                <externally-managed-flag>false</externally-managed-flag>
+            </attribute-definition>
+        </custom-attribute-definitions>
+        <group-definitions>
+            <attribute-group group-id="Amplience">
+                <display-name xml:lang="x-default">Amplience</display-name>
+                <attribute attribute-id="amplienceDeliveryKey"/>
+                <attribute attribute-id="amplienceContentId"/>
+                <attribute attribute-id="amplienceWidgetType"/>
+                <attribute attribute-id="amplienceSchema"/>
+                <attribute attribute-id="amplienceWidgetAttributes"/>
+                <attribute attribute-id="amplienceSourceJson"/>
+                <attribute attribute-id="amplienceImageUrl"/>
+            </attribute-group>
+            <attribute-group group-id="Contentful">
+                <display-name xml:lang="x-default">Contentful</display-name>
+                <attribute attribute-id="contentfulEntryId"/>
+                <attribute attribute-id="contentfulContentType"/>
+                <attribute attribute-id="contentfulSlug"/>
+                <attribute attribute-id="contentfulWidgetType"/>
+                <attribute attribute-id="contentfulWidgetAttributes"/>
+                <attribute attribute-id="contentfulSourceJson"/>
+                <attribute attribute-id="contentfulImageUrl"/>
+            </attribute-group>
+        </group-definitions>
+    </type-extension>
 </metadata>

@@ -14,6 +14,7 @@
     var currentContentId = '';
     var allItems = [];
     var visibleItems = [];
+    var lastPreviewJsonFile = '';
 
     /**
      * Read page config from data attributes.
@@ -332,6 +333,38 @@
     }
 
     /**
+     * Drop empty names and duplicates (legacy export UI treated one library file as meta + content).
+     * @param {string[]} fileNames - raw file names from export API
+     * @returns {string[]} Unique non-empty file names
+     */
+    function uniqueExportFileNames(fileNames) {
+        var seen = {};
+        var out = [];
+        var i;
+        for (i = 0; i < (fileNames || []).length; i++) {
+            var name = String(fileNames[i] || '').trim();
+            if (name && !seen[name]) {
+                seen[name] = true;
+                out.push(name);
+            }
+        }
+        return out;
+    }
+
+    /**
+     * Single library XML path from export API (meta XML is no longer generated per export).
+     * @param {Object} data - export response
+     * @returns {string} Library XML file name, or empty string
+     */
+    function resolveLibraryExportFileName(data) {
+        if (!data) return '';
+        var fromList = data.fileNames && data.fileNames.length
+            ? data.fileNames[data.fileNames.length - 1]
+            : '';
+        return String(data.fileName || fromList || '').trim();
+    }
+
+    /**
      * Render download buttons for exported files.
      * @param {HTMLElement} container - mount node
      * @param {string[]} fileNames - file names
@@ -342,9 +375,10 @@
         if (!container) return;
         var mount = container;
         mount.innerHTML = '';
-        if (!fileNames || !fileNames.length) return;
+        var namesToShow = uniqueExportFileNames(fileNames);
+        if (!namesToShow.length) return;
         var i = 0;
-        while (i < fileNames.length) {
+        while (i < namesToShow.length) {
             (function (name) {
                 var btn = document.createElement('button');
                 btn.type = 'button';
@@ -360,7 +394,7 @@
                     }, 2000);
                 });
                 mount.appendChild(btn);
-            }(fileNames[i]));
+            }(namesToShow[i]));
             i += 1;
         }
     }
@@ -726,22 +760,16 @@
             var lib = data.libraryId ? (' into library "' + data.libraryId + '"') : '';
             setExportAlert(
                 'Exported ' + built + ' content item(s)' + lib
-                    + '. Import metadata XML first, then library XML in BM Import & Export.',
+                    + '. Import the library XML in BM Import & Export.',
                 'ok'
             );
-            var names = data.fileNames && data.fileNames.length
-                ? data.fileNames
-                : [data.metaFileName, data.fileName].filter(Boolean);
-            if (names.length) {
-                renderDownloadLinks(downloads, names, cfg.downloadXmlUrl);
-                // Auto-download library XML (primary asset file)
-                var primary = data.fileName || names[names.length - 1];
-                if (primary) {
-                    triggerBlobDownload(
-                        cfg.downloadXmlUrl + '?fileName=' + encodeURIComponent(primary),
-                        primary
-                    );
-                }
+            var primary = resolveLibraryExportFileName(data);
+            if (primary) {
+                renderDownloadLinks(downloads, [primary], cfg.downloadXmlUrl);
+                triggerBlobDownload(
+                    cfg.downloadXmlUrl + '?fileName=' + encodeURIComponent(primary),
+                    primary
+                );
             }
         });
     }
@@ -838,10 +866,17 @@
             + '<li><strong>Failed:</strong> ' + escHtml(String((summary && summary.failed) || 0)) + '</li>'
             + '<li><strong>Content types:</strong> ' + escHtml(typeLabels.join(', ') || '—') + '</li>'
             + '</ul>';
+        if (fileName && /\.json$/i.test(fileName)) {
+            html += '<p class="cms-panel__hint cms-panel__hint--note cms-library-preview__import-hint">'
+                + 'Preview JSON stays in IMPEX (<code>/Impex/src/migration/content/</code>). '
+                + 'To fill Contentful fields on content assets, click <strong>Export XML</strong>, '
+                + 'then import the <strong>library</strong> XML (not this JSON) in '
+                + 'Administration \u2192 Site Development \u2192 Import &amp; Export.</p>';
+        }
         box.innerHTML = html;
         if (meta) {
             meta.textContent = fileName
-                ? ('Full JSON saved as ' + fileName + ' — use Download below.')
+                ? ('Full JSON saved as ' + fileName + ' — download below. Does not update Content Assets.')
                 : '';
         }
         if (previewJson) {
@@ -867,7 +902,6 @@
         var attempted = 0;
         var failed = 0;
         var fileName = '';
-        var metaFileName = '';
         var libraryId = '';
         var lastSummary = null;
         var chunkIndex = 0;
@@ -895,9 +929,7 @@
         function finish(ok, message, kind) {
             if (button) button.disabled = false;
             setBulkStatus(message, kind || (ok ? 'ok' : 'error'));
-            var names = [];
-            if (metaFileName) names.push(metaFileName);
-            if (fileName) names.push(fileName);
+            var names = uniqueExportFileNames(fileName ? [fileName] : []);
             if (downloads && names.length) {
                 renderDownloadLinks(downloads, names, cfg.downloadXmlUrl);
             }
@@ -955,14 +987,10 @@
                 processed += typeof data.built === 'number' ? data.built : batch.length;
                 attempted += batch.length;
                 failed += data.failed || 0;
-                if (data.fileName) fileName = data.fileName;
-                if (data.metaFileName) metaFileName = data.metaFileName;
                 if (data.libraryId) libraryId = data.libraryId;
                 if (data.summary) lastSummary = data.summary;
-                if (data.fileNames && data.fileNames.length) {
-                    if (data.fileNames[0]) metaFileName = data.fileNames[0];
-                    if (data.fileNames[1]) fileName = data.fileNames[1];
-                }
+                var batchFile = resolveLibraryExportFileName(data);
+                if (batchFile) fileName = batchFile;
                 chunkIndex += 1;
                 next();
             });
@@ -983,9 +1011,10 @@
             batchSize: 5,
             startMsg: 'Building library JSON for {n} item(s) in batches...',
             progressMsg: 'Previewing {done}/{total}...',
-            doneMsg: 'Preview ready: {built} item(s). Download the JSON file below.',
+            doneMsg: 'Preview ready: {built} item(s). JSON is in IMPEX only — click Export XML, then import library XML to update Content Assets.',
             failMsg: 'Library preview failed',
             onSuccess: function (summary, fileName) {
+                if (fileName) lastPreviewJsonFile = fileName;
                 renderLibrarySummary(summary || {
                     totalFetched: visibleItems.length,
                     failed: 0,
@@ -1002,6 +1031,41 @@
      * @returns {void}
      */
     function exportLibrary(cfg) {
+        var root = document.getElementById('acc-cms-root');
+        var platformId = root ? String(root.getAttribute('data-platform-id') || '') : '';
+        if (platformId === 'contentful' && lastPreviewJsonFile) {
+            var previewBtn = document.getElementById('acc-cms-export-library-btn');
+            var previewDownloads = document.getElementById('acc-cms-bulk-downloads');
+            if (previewBtn) previewBtn.disabled = true;
+            if (previewDownloads) previewDownloads.innerHTML = '';
+            setBulkStatus(
+                'Building library XML from preview JSON (' + lastPreviewJsonFile + ')…',
+                'info'
+            );
+            post(
+                cfg.exportContentUrl,
+                'previewFile=' + encodeURIComponent(lastPreviewJsonFile),
+                function (data) {
+                    if (previewBtn) previewBtn.disabled = false;
+                    if (!data.ok) {
+                        setBulkStatus(data.error || 'Library export failed', 'error');
+                        return;
+                    }
+                    var primary = resolveLibraryExportFileName(data);
+                    setBulkStatus(
+                        'Exported ' + (data.built || 0) + ' asset(s) into library "'
+                            + (data.libraryId || '') + '". Import the library XML in BM. '
+                            + 'Built from preview JSON so contentfulSourceJson matches preview.',
+                        'ok'
+                    );
+                    if (primary && previewDownloads) {
+                        renderDownloadLinks(previewDownloads, [primary], cfg.downloadXmlUrl);
+                    }
+                }
+            );
+            return;
+        }
+
         runBatchedRequest(cfg, {
             url: cfg.exportContentUrl,
             buttonId: 'acc-cms-export-library-btn',
@@ -1009,7 +1073,7 @@
             finalizeBatches: true,
             startMsg: 'Exporting {n} item(s) to SFCC library XML in batches...',
             progressMsg: 'Exporting {done}/{total}...',
-            doneMsg: 'Exported {built} asset(s) into library "{library}". Import metadata XML first, then library XML. Failed: {failed}.',
+            doneMsg: 'Exported {built} asset(s) into library "{library}". Import the library XML in BM. Failed: {failed}.',
             failMsg: 'Library export failed'
         });
     }
@@ -1040,7 +1104,7 @@
             startMsg: 'Re-syncing {n} filtered item(s) from Amplience...',
             progressMsg: 'Re-syncing {done}/{total}...',
             doneMsg: 'Re-synced {built} filtered item(s) into IMPEX for library "{library}". '
-                + 'Import metadata XML first, then library XML in BM if you need the SFCC snapshot updated. '
+                + 'Import the library XML in BM if you need the SFCC snapshot updated. '
                 + 'Storefront live CDN does not require this import. Failed: {failed}.',
             failMsg: 'Filtered item re-sync failed'
         });

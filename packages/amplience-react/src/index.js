@@ -6,6 +6,7 @@ export { ImageAndText } from './components/ImageAndText';
 export { AmplienceWidget } from './components/AmplienceWidget';
 export { useAmplienceContent } from './hooks/useAmplienceContent';
 export { useAmplienceCatalog } from './hooks/useAmplienceCatalog';
+export { useContentfulCatalog } from './hooks/useContentfulCatalog';
 export {
     registerAmpliencePageDesignerComponents,
     AmpliencePdWidget,

@@ -4870,7 +4870,7 @@ exports.ContentMigration = function () {
         impexPath:           pageCtx.impexPath,
         impexUrl:            pageCtx.impexUrl,
         cssUrl:              URLUtils.staticURL('/css/accelerator-migration.css').toString() + '?v=18',
-        contentMigrationJsUrl: URLUtils.staticURL('/js/content-migration.js').toString() + '?v=28'
+        contentMigrationJsUrl: URLUtils.staticURL('/js/content-migration.js').toString() + '?v=31'
     }));
 };
 exports.ContentMigration.public = true;
@@ -5157,6 +5157,7 @@ exports.ExportContentfulContent = function () {
     response.setContentType('application/json');
     var deliveryKey = getParam('deliveryKey');
     var contentId   = getParam('contentId');
+    var previewFile = getParam('previewFile');
     try {
         var contentIds = parseCmsContentIds();
         var appendFile = getAmplienceAppendFile('xml');
@@ -5164,11 +5165,15 @@ exports.ExportContentfulContent = function () {
         var finalize = (!finalizeRaw && finalizeRaw !== '0' && finalizeRaw !== 'false')
             ? true
             : (finalizeRaw === '1' || finalizeRaw === 'true');
-        if (!deliveryKey && !contentId && !contentIds.length && !(appendFile && finalize)) {
-            jsonResponse({ ok: false, error: 'entryId, slug, or contentIds is required' });
+        var runner = require('*/cartridge/scripts/migration/contentMigration/contentfulMigrationRunner');
+        if (previewFile && String(previewFile).trim()) {
+            jsonResponse(runner.exportFromPreviewFile(previewFile, null));
             return;
         }
-        var runner = require('*/cartridge/scripts/migration/contentMigration/contentfulMigrationRunner');
+        if (!deliveryKey && !contentId && !contentIds.length && !(appendFile && finalize)) {
+            jsonResponse({ ok: false, error: 'entryId, slug, contentIds, or previewFile is required' });
+            return;
+        }
         var exportOpts = { appendFile: appendFile, finalize: finalize };
         var result = contentIds.length
             ? runner.exportByContentIds(contentIds, null, exportOpts)

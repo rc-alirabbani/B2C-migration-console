@@ -1,26 +1,32 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-const hubName = import.meta.env.VITE_AMPLIENCE_HUB_NAME || '';
-
 export default function HomePage() {
-    const demoUrl = hubName
-        ? `/amplience-demo?hub=${encodeURIComponent(hubName)}`
-        : '/amplience-demo';
-
     return (
-        <section className="home-page">
+        <div className="home-page">
             <p className="home-page__eyebrow">React storefront</p>
-            <h1>Synced with B2C Migration Console</h1>
+            <h1>CMS migration demos</h1>
             <p>
-                This app uses the shared Amplience packages from this repo and loads
-                published content live from the Amplience CDN.
+                Browse migrated content from SFCC libraries — separate folders per CMS in Business Manager
+                (<code>amplience/</code> and <code>contentful/</code>).
             </p>
+
+            <h2>Amplience</h2>
             <ul className="home-page__list">
-                <li>Hub: <code>{hubName || '(set AMPLIENCE_HUB_NAME in repo .env)'}</code></li>
-                <li>Console packages: <code>packages/amplience-core</code>, <code>packages/amplience-react</code></li>
+                <li><Link to="/amplience-gallery">Component gallery</Link> — list from SFCC <code>amplience/</code> + live CDN preview</li>
+                <li><Link to="/amplience-demo">Live demo</Link> — fetch by Amplience content id or delivery key</li>
             </ul>
-            <Link className="home-page__cta" to={demoUrl}>Open Amplience demo</Link>
-        </section>
+
+            <h2>Contentful</h2>
+            <ul className="home-page__list">
+                <li><Link to="/contentful-gallery">Component gallery</Link> — list from SFCC <code>contentful/</code> snapshot</li>
+                <li><Link to="/contentful-demo">Entry demo</Link> — JSON + body from migrated content asset</li>
+            </ul>
+
+            <p className="home-page__meta">
+                Sync local catalogs: <code>npm run sync:sfcc-catalog</code> (requires storefront
+                <code>AmplienceContent-List</code> and <code>ContentfulContent-List</code>).
+            </p>
+        </div>
     );
 }
